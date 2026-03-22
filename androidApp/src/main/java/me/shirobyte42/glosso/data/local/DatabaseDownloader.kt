@@ -2,11 +2,12 @@ package me.shirobyte42.glosso.data.local
 
 import android.content.Context
 import io.ktor.client.*
-import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.utils.io.*
+import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 
 class DatabaseDownloader(
     private val context: Context,
@@ -42,33 +42,30 @@ class DatabaseDownloader(
         file.parentFile?.mkdirs()
 
         try {
-            val response: HttpResponse = client.get(DOWNLOAD_URL) {
+            // Using prepareGet ensures we don't buffer the 500MB into memory before processing.
+            // This is a streaming approach that prevents OOM (SIG 9) crashes.
+            client.prepareGet(DOWNLOAD_URL) {
                 onDownload { bytesSentTotal, contentLength ->
                     if (contentLength != null && contentLength > 0) {
                         trySend(DownloadProgress.Progress(bytesSentTotal.toFloat() / contentLength))
                     }
                 }
-            }
-
-            if (response.status.isSuccess()) {
-                val inputStream = response.body<InputStream>()
-
-                withContext(Dispatchers.IO) {
-                    FileOutputStream(file).use { output ->
-                        // Manual copy with larger buffer for better performance
-                        val buffer = ByteArray(32 * 1024) // 32KB buffer
-                        var bytes: Int
-                        while (inputStream.read(buffer).also { bytes = it } != -1) {
-                            output.write(buffer, 0, bytes)
+            }.execute { response ->
+                if (response.status.isSuccess()) {
+                    val channel = response.bodyAsChannel()
+                    
+                    withContext(Dispatchers.IO) {
+                        FileOutputStream(file).use { output ->
+                            // Use Ktor's streaming channel to Java output stream
+                            channel.toInputStream().copyTo(output)
                         }
                     }
+                    trySend(DownloadProgress.Success)
+                    close()
+                } else {
+                    trySend(DownloadProgress.Error("Failed to download: ${response.status}"))
+                    close()
                 }
-                trySend(DownloadProgress.Success)
-                close()
-            }
- else {
-                trySend(DownloadProgress.Error("Failed to download: ${response.status}"))
-                close()
             }
         } catch (e: Exception) {
             trySend(DownloadProgress.Error(e.message ?: "Unknown error"))

@@ -27,6 +27,7 @@ All recognition and curriculum data are stored locally.
 - **Database:** Room (Android)
 - **Networking:** Ktor Client
 - **Machine Learning:** ONNX Runtime for Android
+- **Phonetic Model:** Allosaurus `eng2102` (GPL-3.0) for high-accuracy phonetic recognition
 - **Text-to-Speech:** Qwen3-TTS (Apache-2.0) for high-fidelity speech synthesis
 - **Audio Processing:** Custom MFCC implementation for 8kHz signal processing
 - **Serialization:** Kotlinx Serialization

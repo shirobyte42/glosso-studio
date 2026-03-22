@@ -104,7 +104,7 @@ fun AboutScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    BulletPoint("Phonetic recognition powered by the Allosaurus project (GPL-3.0).")
+                    BulletPoint("Phonetic recognition powered by the Allosaurus project (eng2102 model, GPL-3.0).")
                     
                     val qwenString = buildAnnotatedString {
                         append("Speech synthesis powered by ")

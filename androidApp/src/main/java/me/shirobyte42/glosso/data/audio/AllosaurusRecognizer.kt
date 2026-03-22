@@ -49,10 +49,6 @@ class AllosaurusRecognizer(private val context: Context) {
             
             Log.d(TAG, "Loading English phone map...")
             phoneMap = loadPhoneMap()
-            Log.d(TAG, "Initialization complete. Map size: ${phoneMap.size}")
-            if (phoneMap.isNotEmpty()) {
-                Log.d(TAG, "Sample phone: 0 -> ${phoneMap[0]}, 1 -> ${phoneMap[1]}")
-            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AllosaurusRecognizer", e)
         }
@@ -63,7 +59,6 @@ class AllosaurusRecognizer(private val context: Context) {
         try {
             val phoneMapFile = File(context.filesDir, "phone_eng.txt")
             if (phoneMapFile.exists()) {
-                Log.d(TAG, "Reading phone map file: ${phoneMapFile.absolutePath}, size: ${phoneMapFile.length()}")
                 phoneMapFile.bufferedReader().use { reader ->
                     reader.forEachLine { line ->
                         val parts = line.trim().split(Regex("\\s+"))
@@ -74,8 +69,6 @@ class AllosaurusRecognizer(private val context: Context) {
                         }
                     }
                 }
-            } else {
-                Log.e(TAG, "Phone map file NOT FOUND!")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load phone map", e)
@@ -114,10 +107,7 @@ class AllosaurusRecognizer(private val context: Context) {
             
             val floatPcm = FloatArray(pcmData.size) { pcmData[it].toFloat() / 32768.0f }
             val feat = mfcc.compute(floatPcm)
-            if (feat.isEmpty()) {
-                Log.e(TAG, "MFCC computation returned empty features")
-                return null
-            }
+            if (feat.isEmpty()) return null
             
             val normalizedFeat = normalize(feat)
             val numFrames = normalizedFeat.size
@@ -136,21 +126,17 @@ class AllosaurusRecognizer(private val context: Context) {
             val lengthsBuffer = LongBuffer.wrap(longArrayOf(seqLen))
             val lengthsTensor = OnnxTensor.createTensor(env, lengthsBuffer, longArrayOf(1))
             
-            Log.d(TAG, "Running ONNX inference with $numFrames frames...")
             val results = session.run(mapOf("input_tensor" to inputTensor, "input_lengths" to lengthsTensor))
             val outputTensor = results[0] as OnnxTensor
             val outputFloatArray = outputTensor.floatBuffer.array()
-            val outputShape = outputTensor.info.shape
-            Log.d(TAG, "Inference successful. Output shape: ${outputShape.joinToString(", ")}")
             
-            val classesCount = outputShape[2].toInt()
+            val numPhones = phoneMap.size
             val tokens = mutableListOf<String>()
-            
             for (t in 0 until numFrames) {
                 var maxIdx = -1
                 var maxVal = Float.NEGATIVE_INFINITY
-                for (p in 0 until classesCount) {
-                    val score = outputFloatArray[t * classesCount + p]
+                for (p in 0 until numPhones) {
+                    val score = outputFloatArray[t * numPhones + p]
                     if (score > maxVal) {
                         maxVal = score
                         maxIdx = p
@@ -166,7 +152,6 @@ class AllosaurusRecognizer(private val context: Context) {
                 }
             }
             
-            Log.d(TAG, "Decoded tokens: ${tokens.joinToString(" ")}")
             return tokens.joinToString(" ")
         } catch (e: Exception) {
             Log.e(TAG, "Recognition failed", e)

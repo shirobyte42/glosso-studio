@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -26,6 +27,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun HomeScreen(
     onNavigateToStudio: (Int) -> Unit,
+    onNavigateToAbout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -60,6 +62,11 @@ fun HomeScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("GLOSSO", fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToAbout) {
+                        Icon(Icons.Default.Info, contentDescription = "About", tint = Color.LightGray)
+                    }
+                },
                 actions = {
                     IconButton(onClick = { showResetDialog = true }) {
                         Icon(Icons.Default.Refresh, contentDescription = "Reset Progress", tint = Color.LightGray)

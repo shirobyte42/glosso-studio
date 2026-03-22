@@ -17,6 +17,7 @@ import tech.ignacio.glosso.presentation.theme.GlossoTheme
 import tech.ignacio.glosso.presentation.home.HomeScreen
 import tech.ignacio.glosso.presentation.studio.StudioScreen
 import tech.ignacio.glosso.presentation.topic.TopicSelectionScreen
+import tech.ignacio.glosso.presentation.about.AboutScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
@@ -46,8 +47,14 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onNavigateToStudio = { category ->
                                     navController.navigate("topics/$category")
+                                },
+                                onNavigateToAbout = {
+                                    navController.navigate("about")
                                 }
                             )
+                        }
+                        composable("about") {
+                            AboutScreen(onNavigateBack = { navController.popBackStack() })
                         }
                         composable(
                             route = "topics/{levelIndex}",

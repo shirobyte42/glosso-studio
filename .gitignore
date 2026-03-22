@@ -1,0 +1,49 @@
+# --- General ---
+.DS_Store
+*.log
+*.tmp
+*.temp
+*.bak
+.env
+.env.*
+
+# --- Android / Gradle ---
+.gradle/
+**/build/
+gradlew.bat
+gradle/wrapper/gradle-wrapper.jar
+local.properties
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+captures/
+.externalNativeBuild
+.cxx/
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+
+# --- Kotlin Multiplatform ---
+.kotlin/
+compose-resources/
+
+# --- IDEs ---
+*.iml
+.idea/
+!.idea/runConfigurations/
+!.idea/icon.png
+!.idea/vcs.xml
+!.idea/copyright/
+*.ipr
+*.iws
+
+# --- Databases ---
+*.db-journal
+*.db-shm
+*.db-wal

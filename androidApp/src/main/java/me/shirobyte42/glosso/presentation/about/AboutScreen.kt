@@ -5,10 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -62,7 +59,7 @@ fun AboutScreen(
             )
             
             Text(
-                text = "Version 1.0.0",
+                text = "Version 0.1.0",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray
             )
@@ -185,8 +182,7 @@ fun AboutScreen(
                     }
                 }
             }
-            
-
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

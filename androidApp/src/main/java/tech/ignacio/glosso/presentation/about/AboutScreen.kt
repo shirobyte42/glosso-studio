@@ -106,6 +106,30 @@ fun AboutScreen(
                     
                     BulletPoint("Phonetic recognition powered by the Allosaurus project (GPL-3.0).")
                     
+                    val qwenString = buildAnnotatedString {
+                        append("Speech synthesis powered by ")
+                        pushStringAnnotation(tag = "URL", annotation = "https://github.com/QwenLM/Qwen3-TTS")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold)) {
+                            append("Qwen3-TTS")
+                        }
+                        pop()
+                        append(" (Apache-2.0).")
+                    }
+                    
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text("• ", style = MaterialTheme.typography.bodyMedium)
+                        androidx.compose.foundation.text.ClickableText(
+                            text = qwenString,
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                            onClick = { offset ->
+                                qwenString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        uriHandler.openUri(annotation.item)
+                                    }
+                            }
+                        )
+                    }
+
                     val inspirationString = buildAnnotatedString {
                         append("Heavily inspired by the ")
                         pushStringAnnotation(tag = "URL", annotation = "https://github.com/Thiagohgl/ai-pronunciation-trainer")

@@ -5,10 +5,30 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+import java.util.Properties
+
 android {
     namespace = "me.shirobyte42.glosso"
     compileSdk = 34
     buildToolsVersion = "34.0.0"
+
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { 
+            localProperties.load(it)
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = localProperties.getProperty("signing.alias")
+            keyPassword = localProperties.getProperty("signing.keyPass")
+            val storeFilePath = localProperties.getProperty("signing.storeFile")
+            storeFile = if (storeFilePath != null) rootProject.file(storeFilePath) else null
+            storePassword = localProperties.getProperty("signing.storePass")
+        }
+    }
 
     defaultConfig {
         applicationId = "me.shirobyte42.glosso"
@@ -20,7 +40,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {

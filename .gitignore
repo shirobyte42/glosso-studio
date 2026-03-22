@@ -24,6 +24,8 @@ captures/
 .cxx/
 *.apk
 *.ap_
+*.jks
+*.keystore
 *.dex
 *.class
 bin/

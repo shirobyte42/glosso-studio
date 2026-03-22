@@ -29,7 +29,7 @@ val commonModule = module {
                         println("HTTP Client: $message")
                     }
                 }
-                level = LogLevel.ALL
+                level = LogLevel.INFO
             }
             install(HttpTimeout) {
                 requestTimeoutMillis = 60000 // 60s

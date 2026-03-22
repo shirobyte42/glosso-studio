@@ -52,15 +52,21 @@ class DatabaseDownloader(
 
             if (response.status.isSuccess()) {
                 val inputStream = response.body<InputStream>()
-                
+
                 withContext(Dispatchers.IO) {
                     FileOutputStream(file).use { output ->
-                        inputStream.copyTo(output)
+                        // Manual copy with larger buffer for better performance
+                        val buffer = ByteArray(32 * 1024) // 32KB buffer
+                        var bytes: Int
+                        while (inputStream.read(buffer).also { bytes = it } != -1) {
+                            output.write(buffer, 0, bytes)
+                        }
                     }
                 }
                 trySend(DownloadProgress.Success)
                 close()
-            } else {
+            }
+ else {
                 trySend(DownloadProgress.Error("Failed to download: ${response.status}"))
                 close()
             }

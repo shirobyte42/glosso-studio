@@ -59,9 +59,9 @@ class StudioViewModel(
         }
     }
 
-    fun setTopics(topics: List<String>) {
+    fun setTopics(levelIndex: Int, topics: List<String>) {
         _uiState.update { it.copy(selectedTopics = topics) }
-        loadSample(prefs.getLastLevel())
+        loadSample(levelIndex)
     }
 
     fun loadSample(levelIndex: Int) {
@@ -142,8 +142,8 @@ class StudioViewModel(
                         Log.d(TAG, "On-device scoring result: ${result.score}")
                         result
                     } else {
-                        Log.d(TAG, "On-device recognition failed or model not ready, falling back to cloud...")
-                        repository.analyzeSpeech(base64Audio, sentence.text, sentence.ipa, mode = "quick", language = "en")
+                        Log.e(TAG, "On-device recognition failed.")
+                        throw Exception("On-device recognition failed. Please ensure setup is complete.")
                     }
                 }
                 

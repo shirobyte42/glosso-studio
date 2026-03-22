@@ -16,11 +16,8 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // Ktor for Networking
-                implementation("io.ktor:ktor-client-core:2.3.7")
-                implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+                // Serialization for Models
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
-                implementation("io.ktor:ktor-client-logging:2.3.7")
                 
                 // Koin for DI
                 implementation("io.insert-koin:koin-core:3.5.3")
@@ -31,7 +28,6 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-okhttp:2.3.7")
             }
         }
     }

@@ -30,8 +30,10 @@ class DatabaseDownloader(
     
     private fun getBaseUrl(): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        val versionName = packageInfo.versionName
-        return "https://gitlab.com/shirobyte421/glosso-studio/-/raw/v$versionName/data"
+        // Ensure we handle version names that might already start with 'v' or not
+        val rawVersion = packageInfo.versionName
+        val version = if (rawVersion.startsWith("v")) rawVersion else "v$rawVersion"
+        return "https://gitlab.com/shirobyte421/glosso-studio/-/raw/$version/data"
     }
 
     private fun getDownloadUrl(fileName: String): String = "${getBaseUrl()}/$fileName"
@@ -44,15 +46,14 @@ class DatabaseDownloader(
 
     fun isLevelDownloaded(levelIndex: Int): Boolean {
         val file = getDatabaseFile(levelIndex)
-        // Heuristic: most level DBs are > 40MB
-        return file.exists() && file.length() > 5 * 1024 * 1024
+        return file.exists() && file.length() > 1024 * 1024
     }
 
     fun isModelSetupComplete(): Boolean {
         val onnxFile = getOnnxFile()
         val phoneFile = getPhoneMapFile()
-        // The model is ~43MB. If it's smaller than 10MB, it's definitely corrupted/pointer.
-        return onnxFile.exists() && onnxFile.length() > 10 * 1024 * 1024 &&
+        // If file is very small, it's likely an LFS pointer, not the model.
+        return onnxFile.exists() && onnxFile.length() > 5 * 1024 * 1024 &&
                phoneFile.exists() && phoneFile.length() > 100
     }
 
@@ -63,77 +64,72 @@ class DatabaseDownloader(
 
     fun downloadRequiredAssets(): Flow<DownloadProgress> = callbackFlow {
         try {
-            // 1. Download Phone Map (tiny)
             val phoneUrl = getDownloadUrl(PHONE_MAP_NAME)
             val phoneFile = getPhoneMapFile()
             
             if (!phoneFile.exists() || phoneFile.length() < 10) {
-                Log.d(TAG, "Downloading phone map...")
+                Log.d(TAG, "Downloading phone map from $phoneUrl")
                 val response = client.get(phoneUrl)
                 if (response.status.isSuccess()) {
                     val bytes = response.body<ByteArray>()
                     withContext(Dispatchers.IO) {
                         phoneFile.writeBytes(bytes)
                     }
+                } else {
+                    throw Exception("Phone map 404")
                 }
             }
 
-            // 2. Download ONNX Model
             val onnxUrl = getDownloadUrl(ONNX_MODEL_NAME)
             val onnxFile = getOnnxFile()
             
             Log.d(TAG, "Verifying ONNX model at $onnxUrl")
             val headResponse = client.head(onnxUrl)
             val expectedSize = headResponse.contentLength() ?: -1L
-            Log.d(TAG, "Server reports size: $expectedSize, local size: ${onnxFile.length()}")
             
-            // If local file exists but size doesn't match server, OR it's suspiciously small (< 10MB)
-            val isCorrupted = onnxFile.exists() && (
-                (expectedSize != -1L && onnxFile.length() != expectedSize) || 
-                (onnxFile.length() < 10 * 1024 * 1024)
-            )
-
-            if (isCorrupted) {
-                Log.w(TAG, "Local model file is corrupted or incomplete. Deleting and restarting.")
+            if (onnxFile.exists() && expectedSize != -1L && onnxFile.length() != expectedSize) {
+                Log.w(TAG, "Size mismatch. Expected $expectedSize, got ${onnxFile.length()}")
                 onnxFile.delete()
             }
 
-            if (!onnxFile.exists() || onnxFile.length() == 0L) {
+            if (!onnxFile.exists() || onnxFile.length() < 1024 * 1024) {
                 Log.d(TAG, "Starting streaming download for ONNX model...")
+                // Use a non-callback approach inside the callbackFlow to ensure sequential execution
                 downloadStreamingInternal(onnxUrl, onnxFile) { progress ->
                     trySend(DownloadProgress.Progress(progress))
                 }
             }
 
+            Log.d(TAG, "Required assets download complete.")
             trySend(DownloadProgress.Success)
             close()
         } catch (e: Exception) {
             Log.e(TAG, "Asset download failed", e)
-            trySend(DownloadProgress.Error(e.message ?: "Asset download failed"))
+            trySend(DownloadProgress.Error(e.message ?: "Setup failed"))
             close(e)
         }
         awaitClose { }
     }
 
     private suspend fun downloadStreamingInternal(url: String, destination: File, onProgress: (Float) -> Unit) {
-        client.prepareGet(url) {
-            onDownload { bytesSentTotal, contentLength ->
-                if (contentLength > 0) {
-                    onProgress(bytesSentTotal.toFloat() / contentLength)
+        withContext(Dispatchers.IO) {
+            client.prepareGet(url) {
+                onDownload { bytesSentTotal, contentLength ->
+                    if (contentLength > 0) {
+                        onProgress(bytesSentTotal.toFloat() / contentLength)
+                    }
                 }
-            }
-        }.execute { response ->
-            if (response.status.isSuccess()) {
-                val channel = response.bodyAsChannel()
-                withContext(Dispatchers.IO) {
+            }.execute { response ->
+                if (response.status.isSuccess()) {
+                    val channel = response.bodyAsChannel()
                     FileOutputStream(destination).use { output ->
                         channel.toInputStream().copyTo(output)
                         output.flush()
                         output.getFD().sync()
                     }
+                } else {
+                    throw Exception("HTTP ${response.status.value}")
                 }
-            } else {
-                throw Exception("HTTP ${response.status.value}: Failed to download $url")
             }
         }
     }
@@ -147,12 +143,7 @@ class DatabaseDownloader(
             val headResponse = client.head(url)
             val expectedSize = headResponse.contentLength() ?: -1L
 
-            val isCorrupted = file.exists() && (
-                (expectedSize != -1L && file.length() != expectedSize) || 
-                (file.length() < 1024 * 1024)
-            )
-
-            if (isCorrupted) {
+            if (file.exists() && expectedSize != -1L && file.length() != expectedSize) {
                 file.delete()
             }
 
@@ -166,7 +157,7 @@ class DatabaseDownloader(
             close()
         } catch (e: Exception) {
             Log.e(TAG, "Level download failed", e)
-            trySend(DownloadProgress.Error(e.message ?: "Level download failed"))
+            trySend(DownloadProgress.Error(e.message ?: "Download failed"))
             close(e)
         }
         awaitClose { }

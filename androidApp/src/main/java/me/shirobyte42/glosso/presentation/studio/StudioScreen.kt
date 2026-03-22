@@ -117,7 +117,7 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
 
     LaunchedEffect(category, topics) { 
         viewModel.loadTopics(category)
-        viewModel.setTopics(topics ?: emptyList())
+        viewModel.setTopics(category, topics ?: emptyList())
     }
 
     LaunchedEffect(state.error) {

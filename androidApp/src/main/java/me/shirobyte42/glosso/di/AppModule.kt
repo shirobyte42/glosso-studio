@@ -19,7 +19,20 @@ import androidx.room.Room
 import me.shirobyte42.glosso.data.repository.GlossoRepositoryImpl
 import me.shirobyte42.glosso.domain.repository.GlossoRepository
 
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+
 val appModule = module {
+    single {
+        HttpClient {
+            install(HttpTimeout) {
+                requestTimeoutMillis = null
+                connectTimeoutMillis = 60000
+                socketTimeoutMillis = 300000
+            }
+        }
+    }
+
     single { DatabaseDownloader(get(), get()) }
 
     // Persistent database for user progress (streaks, activity, mastered IDs)
@@ -57,13 +70,11 @@ val appModule = module {
             db.sentenceDao
         }
     }
-    // Override the common repository with one that has the local data source
-    single<GlossoRepository> { GlossoRepositoryImpl(get(), get<LocalSentenceDataSource>()) }
-
     
+    single<GlossoRepository> { GlossoRepositoryImpl(get<LocalSentenceDataSource>()) }
+
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (levelIndex: Int) ->
-        // Use the factory to get the database for the specific level
         val levelDb: GlossoDatabase = get(qualifier = org.koin.core.qualifier.named("level_db")) { parametersOf(levelIndex) }
         
         StudioViewModel(

@@ -126,7 +126,7 @@ class AllosaurusRecognizer(private val context: Context) {
             val lengthsBuffer = LongBuffer.wrap(longArrayOf(seqLen))
             val lengthsTensor = OnnxTensor.createTensor(env, lengthsBuffer, longArrayOf(1))
             
-            val results = session.run(mapOf("input" to inputTensor, "input_lengths" to lengthsTensor))
+            val results = session.run(mapOf("input_tensor" to inputTensor, "input_lengths" to lengthsTensor))
             val outputTensor = results[0] as OnnxTensor
             val outputFloatArray = outputTensor.floatBuffer.array()
             

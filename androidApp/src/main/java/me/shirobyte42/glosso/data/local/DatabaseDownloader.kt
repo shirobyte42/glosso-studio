@@ -32,9 +32,16 @@ class DatabaseDownloader(
         return context.getDatabasePath(DB_NAME)
     }
 
+    /**
+     * Checks if the database is already fully downloaded.
+     * Note: This is synchronous and only checks local state. 
+     * Use [verifyAndDownload] for a more robust check.
+     */
     fun isDatabaseDownloaded(): Boolean {
         val file = getDatabaseFile()
-        return file.exists() && file.length() > 0
+        // Simple check: exists and is large enough to be the real DB (not an error page)
+        // The sentences.db v0.1.0 is ~542MB.
+        return file.exists() && file.length() > 500 * 1024 * 1024
     }
 
     fun downloadDatabase(): Flow<DownloadProgress> = callbackFlow {
@@ -42,8 +49,23 @@ class DatabaseDownloader(
         file.parentFile?.mkdirs()
 
         try {
-            // Using prepareGet ensures we don't buffer the 500MB into memory before processing.
-            // This is a streaming approach that prevents OOM (SIG 9) crashes.
+            // 1. Check file size on server to verify completeness
+            val headResponse = client.head(DOWNLOAD_URL)
+            val expectedSize = headResponse.contentLength() ?: -1L
+
+            if (file.exists() && expectedSize != -1L && file.length() == expectedSize) {
+                trySend(DownloadProgress.Success)
+                close()
+                return@callbackFlow
+            }
+
+            // 2. Start/Restart download if size mismatch or file missing
+            // If it exists but is smaller, we'll overwrite it for now to ensure integrity.
+            // Future improvement: implement Range-based resume.
+            if (file.exists() && file.length() != expectedSize) {
+                file.delete()
+            }
+
             client.prepareGet(DOWNLOAD_URL) {
                 onDownload { bytesSentTotal, contentLength ->
                     if (contentLength != null && contentLength > 0) {
@@ -56,7 +78,6 @@ class DatabaseDownloader(
                     
                     withContext(Dispatchers.IO) {
                         FileOutputStream(file).use { output ->
-                            // Use Ktor's streaming channel to Java output stream
                             channel.toInputStream().copyTo(output)
                         }
                     }

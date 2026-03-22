@@ -6,9 +6,6 @@ AuthorName: ShiroByte42
 SourceCode: https://gitlab.com/shirobyte421/glosso-studio
 IssueTracker: https://gitlab.com/shirobyte421/glosso-studio/-/issues
 
-AntiFeatures:
-  - NonFreeNet
-
 RepoType: git
 Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 

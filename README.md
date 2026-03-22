@@ -69,3 +69,9 @@ The project follows a clean architecture pattern within the Kotlin Multiplatform
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3 (AGPLv3)**. See the [LICENSE](LICENSE) file for the full license text.
+
+## F-Droid
+
+Glosso Studio is designed to be compatible with F-Droid.
+- **Metadata:** Located in `fastlane/metadata/android`.
+- **Build Recipe:** The `me.shirobyte42.glosso.yml` file is provided as a reference for F-Droid inclusion.

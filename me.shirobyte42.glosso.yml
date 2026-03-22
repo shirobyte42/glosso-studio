@@ -1,0 +1,28 @@
+Categories:
+  - Education
+  - Language
+License: AGPL-3.0-or-later
+AuthorName: ShiroByte42
+SourceCode: https://gitlab.com/shirobyte421/glosso-studio
+IssueTracker: https://gitlab.com/shirobyte421/glosso-studio/-/issues
+
+RepoType: git
+Repo: https://gitlab.com/shirobyte421/glosso-studio.git
+
+Builds:
+  - versionName: 0.1.0
+    versionCode: 1
+    commit: v0.1.0
+    subdir: .
+    gradle:
+      - :androidApp:assembleRelease
+    prebuild:
+      - # Ensure Git LFS is handled if the build environment doesn't do it automatically.
+      - # Note: F-Droid build servers might need specific config for LFS.
+      - # Removing any pre-bundled binary databases if they exist (though we moved them to data/).
+      - rm -rf data/*.db
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.1.0
+CurrentVersionCode: 1

@@ -1,0 +1,4 @@
+Initial release of Glosso Studio.
+- Real-time phonetic assessment with Allosaurus eng2102.
+- On-demand curriculum database downloads.
+- Mastery and streak tracking system.

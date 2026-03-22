@@ -1,0 +1,9 @@
+Glosso Studio is a professional, offline-first pronunciation training application. It leverages advanced phonetic recognition models to provide real-time feedback on your spoken English.
+
+Key Features:
+- Real-time Phonetic Assessment: Uses the Allosaurus eng2102 model to analyze your speech with high precision.
+- Offline-First: All recognition and curriculum data are stored locally for privacy and performance.
+- Structured Curriculum: Six difficulty tiers ranging from Beginner to Mastery.
+- Dynamic Content: On-demand download of curriculum databases.
+- Progress Tracking: Track your mastery score and maintain daily practice streaks.
+

@@ -6,12 +6,12 @@ plugins {
 }
 
 android {
-    namespace = "tech.ignacio.glosso"
+    namespace = "me.shirobyte42.glosso"
     compileSdk = 34
     buildToolsVersion = "34.0.0"
 
     defaultConfig {
-        applicationId = "tech.ignacio.glosso"
+        applicationId = "me.shirobyte42.glosso"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

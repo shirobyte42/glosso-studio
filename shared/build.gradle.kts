@@ -38,7 +38,7 @@ kotlin {
 }
 
 android {
-    namespace = "tech.ignacio.glosso.shared"
+    namespace = "me.shirobyte42.glosso.shared"
     compileSdk = 34
     buildToolsVersion = "34.0.0"
     defaultConfig {

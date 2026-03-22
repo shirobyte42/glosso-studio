@@ -186,16 +186,7 @@ fun AboutScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            Text(
-                text = "© 2026 shirobyte42",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.LightGray,
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
+
         }
     }
 }

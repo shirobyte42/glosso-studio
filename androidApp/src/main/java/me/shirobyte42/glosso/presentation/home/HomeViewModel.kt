@@ -78,7 +78,8 @@ class HomeViewModel(
                     try {
                         repository.getSentenceCount(levelIndex, "en")
                     } catch (e: Exception) {
-                        Log.e(TAG, "Failed to get count for level $levelIndex", e)
+                        Log.e(TAG, "Failed to get count for level $levelIndex - DB might be corrupted. Deleting.", e)
+                        downloader.deleteLevel(levelIndex)
                         0
                     }
                 } else {

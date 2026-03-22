@@ -17,6 +17,7 @@ import me.shirobyte42.glosso.domain.repository.PreferenceRepository
 import me.shirobyte42.glosso.domain.repository.SpeechController
 import me.shirobyte42.glosso.domain.usecase.UpdateMasteryUseCase
 import me.shirobyte42.glosso.data.audio.AndroidSpeechController
+import me.shirobyte42.glosso.data.local.SentenceDao
 import java.io.File
 
 class StudioViewModel(

@@ -34,9 +34,16 @@ class DatabaseDownloader(
 
     fun isLevelDownloaded(levelIndex: Int): Boolean {
         val file = getDatabaseFile(levelIndex)
-        // Check if file exists and has some data. 
-        // Specific size checks are done during the download flow.
-        return file.exists() && file.length() > 1024 * 1024 // > 1MB
+        // Corrected heuristic: sentences_0.db is ~48MB. 
+        // 1MB was too low and might have allowed corrupted files to pass.
+        return file.exists() && file.length() > 40 * 1024 * 1024
+    }
+
+    fun deleteLevel(levelIndex: Int) {
+        val file = getDatabaseFile(levelIndex)
+        if (file.exists()) {
+            file.delete()
+        }
     }
 
     fun downloadLevel(levelIndex: Int): Flow<DownloadProgress> = callbackFlow {
@@ -72,6 +79,8 @@ class DatabaseDownloader(
                     withContext(Dispatchers.IO) {
                         FileOutputStream(file).use { output ->
                             channel.toInputStream().copyTo(output)
+                            output.flush()
+                            output.getFD().sync() // Force write to physical storage
                         }
                     }
                     trySend(DownloadProgress.Success)

@@ -1,23 +1,6 @@
 package me.shirobyte42.glosso.di
 
 import org.koin.androidx.viewmodel.dsl.viewModel
-import org.koin.dsl.module
-import me.shirobyte42.glosso.data.audio.AllosaurusRecognizer
-import me.shirobyte42.glosso.data.audio.AndroidSpeechController
-import me.shirobyte42.glosso.data.prefs.AndroidPreferenceRepository
-import me.shirobyte42.glosso.domain.repository.PreferenceRepository
-import me.shirobyte42.glosso.domain.repository.SpeechController
-import me.shirobyte42.glosso.presentation.home.HomeViewModel
-import me.shirobyte42.glosso.presentation.studio.StudioViewModel
-
-import me.shirobyte42.glosso.data.local.LocalSentenceDataSource
-import me.shirobyte42.glosso.data.local.GlossoDatabase
-import me.shirobyte42.glosso.data.local.DatabaseDownloader
-import androidx.room.Room
-import me.shirobyte42.glosso.data.repository.GlossoRepositoryImpl
-import me.shirobyte42.glosso.domain.repository.GlossoRepository
-
-import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.parameter.parametersOf
 import org.koin.dsl.module
 import me.shirobyte42.glosso.data.audio.AllosaurusRecognizer
@@ -78,7 +61,7 @@ val appModule = module {
     single<GlossoRepository> { GlossoRepositoryImpl(get(), get<LocalSentenceDataSource>()) }
 
     
-    viewModel { HomeViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { (levelIndex: Int) ->
         // Use the factory to get the database for the specific level
         val levelDb: GlossoDatabase = get(qualifier = org.koin.core.qualifier.named("level_db")) { parametersOf(levelIndex) }

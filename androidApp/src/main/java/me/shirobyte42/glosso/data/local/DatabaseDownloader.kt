@@ -2,6 +2,7 @@ package me.shirobyte42.glosso.data.local
 
 import android.content.Context
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -45,8 +46,10 @@ class DatabaseDownloader(
     }
 
     fun isModelSetupComplete(): Boolean {
-        return getOnnxFile().exists() && getOnnxFile().length() > 40 * 1024 * 1024 &&
-               getPhoneMapFile().exists() && getPhoneMapFile().length() > 100
+        val onnxFile = getOnnxFile()
+        val phoneFile = getPhoneMapFile()
+        return onnxFile.exists() && onnxFile.length() > 40 * 1024 * 1024 &&
+               phoneFile.exists() && phoneFile.length() > 100
     }
 
     fun deleteLevel(levelIndex: Int) {
@@ -58,12 +61,15 @@ class DatabaseDownloader(
         try {
             // 1. Download Phone Map (tiny)
             if (!getPhoneMapFile().exists()) {
-                downloadFile(getDownloadUrl(PHONE_MAP_NAME), getPhoneMapFile())
+                val bytes = client.get(getDownloadUrl(PHONE_MAP_NAME)).body<ByteArray>()
+                withContext(Dispatchers.IO) {
+                    getPhoneMapFile().writeBytes(bytes)
+                }
             }
 
             // 2. Download ONNX Model (approx 43MB)
             if (!getOnnxFile().exists() || getOnnxFile().length() < 40 * 1024 * 1024) {
-                downloadStreaming(getDownloadUrl(ONNX_MODEL_NAME), getOnnxFile()) { progress ->
+                downloadStreamingInternal(getDownloadUrl(ONNX_MODEL_NAME), getOnnxFile()) { progress ->
                     trySend(DownloadProgress.Progress(progress))
                 }
             }
@@ -77,29 +83,20 @@ class DatabaseDownloader(
         awaitClose { }
     }
 
-    private suspend fun downloadFile(url: String, destination: File) {
-        val bytes = client.get(url).bodyAsBytes()
-        withContext(Dispatchers.IO) {
-            destination.writeBytes(bytes)
-        }
-    }
-
-    private suspend fun downloadStreaming(url: String, destination: File, onProgress: (Float) -> Unit) {
+    private suspend fun downloadStreamingInternal(url: String, destination: File, onProgress: (Float) -> Unit) {
         client.prepareGet(url) {
             onDownload { bytesSentTotal, contentLength ->
-                if (contentLength != null && contentLength > 0) {
+                if (contentLength > 0) {
                     onProgress(bytesSentTotal.toFloat() / contentLength)
                 }
             }
         }.execute { response ->
             if (response.status.isSuccess()) {
                 val channel = response.bodyAsChannel()
-                withContext(Dispatchers.IO) {
-                    FileOutputStream(destination).use { output ->
-                        channel.toInputStream().copyTo(output)
-                        output.flush()
-                        output.getFD().sync()
-                    }
+                FileOutputStream(destination).use { output ->
+                    channel.toInputStream().copyTo(output)
+                    output.flush()
+                    output.getFD().sync()
                 }
             } else {
                 throw Exception("Failed to download: ${response.status}")
@@ -126,7 +123,7 @@ class DatabaseDownloader(
                 file.delete()
             }
 
-            downloadStreaming(url, file) { progress ->
+            downloadStreamingInternal(url, file) { progress ->
                 trySend(DownloadProgress.Progress(progress))
             }
             trySend(DownloadProgress.Success)

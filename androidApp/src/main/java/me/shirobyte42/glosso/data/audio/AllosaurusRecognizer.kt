@@ -6,6 +6,7 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.util.Base64
 import android.util.Log
+import java.io.File
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
 import java.util.*
@@ -28,17 +29,18 @@ class AllosaurusRecognizer(private val context: Context) {
             val modelFile = File(context.filesDir, "allosaurus_eng2102.onnx")
             if (!modelFile.exists()) {
                 Log.e(TAG, "CRITICAL: model NOT FOUND in files!")
+            } else {
+                Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
+                val modelBytes = modelFile.readBytes()
+                Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
+                
+                Log.d(TAG, "Creating OrtSession...")
+                // Using explicit cast to avoid ambiguity
+                ortSession = ortEnv?.createSession(modelBytes as ByteArray)
+                
+                Log.d(TAG, "Loading English phone map...")
+                phoneMap = loadPhoneMap()
             }
-
-            Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
-            val modelBytes = modelFile.readBytes()
-            Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
-            
-            Log.d(TAG, "Creating OrtSession...")
-            ortSession = ortEnv?.createSession(modelBytes)
-            
-            Log.d(TAG, "Loading English phone map...")
-            phoneMap = loadPhoneMap()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AllosaurusRecognizer", e)
         }
@@ -48,13 +50,15 @@ class AllosaurusRecognizer(private val context: Context) {
         val map = mutableMapOf<Int, String>()
         try {
             val phoneMapFile = File(context.filesDir, "phone_eng.txt")
-            phoneMapFile.bufferedReader().useLines { lines ->
-                lines.forEach { line ->
-                    val parts = line.trim().split(Regex("\\s+"))
-                    if (parts.size >= 2) {
-                        val phone = parts[0]
-                        val id = parts[1].toInt()
-                        map[id] = phone
+            if (phoneMapFile.exists()) {
+                phoneMapFile.bufferedReader().use { reader ->
+                    reader.forEachLine { line ->
+                        val parts = line.trim().split(Regex("\\s+"))
+                        if (parts.size >= 2) {
+                            val phone = parts[0]
+                            val id = parts[1].toInt()
+                            map[id] = phone
+                        }
                     }
                 }
             }
@@ -69,7 +73,7 @@ class AllosaurusRecognizer(private val context: Context) {
         val env = ortEnv
         
         if (session == null || env == null) {
-            Log.e(TAG, "ONNX Session or Environment is null! Session: $session, Env: $env")
+            Log.e(TAG, "ONNX Session or Environment is null!")
             return null
         }
         
@@ -82,143 +86,91 @@ class AllosaurusRecognizer(private val context: Context) {
             }
 
             if (wavData.size <= 44) {
-                Log.e(TAG, "WAV data too small: ${wavData.size} bytes")
+                Log.e(TAG, "WAV data too small")
                 return null
             }
             
             val pcmData = ShortArray((wavData.size - 44) / 2)
             for (i in pcmData.indices) {
-                val low = wavData[44 + i * 2].toInt() and 0xff
-                val high = wavData[44 + i * 2 + 1].toInt()
-                pcmData[i] = ((high shl 8) or low).toShort()
+                val b1 = wavData[44 + i * 2].toInt() and 0xff
+                val b2 = wavData[44 + i * 2 + 1].toInt() and 0xff
+                pcmData[i] = (b1 or (b2 shl 8)).toShort()
             }
-
-            // 1. Pre-process: No trimming to avoid eating letters
-            val trimmedPcm = pcmData 
-            Log.d(TAG, "PCM size: ${pcmData.size}")
-
-            if (trimmedPcm.size < 400) {
-                Log.w(TAG, "Trimmed audio too short for recognition")
-                return "" 
-            }
-
-            Log.d(TAG, "Extracted and trimmed ${trimmedPcm.size} PCM samples at 8kHz")
-
-            // 2. Convert to FloatArray for MFCC
-            val signal = FloatArray(trimmedPcm.size) { i -> trimmedPcm[i].toFloat() }
-
-            // 3. Compute MFCC
-            var feat = mfcc.compute(signal)
-            Log.d(TAG, "MFCC computed: ${feat.size} frames")
             
-            // 4. Apply speaker CMVN
-            feat = applyCmvn(feat)
-
-            // 5. eng2102 uses feature_window: 1 (no subsampling, just the 40 MFCCs)
-            if (feat.isEmpty()) {
-                Log.w(TAG, "Feature matrix is empty")
-                return null
-            }
-
-            // 6. ONNX Inference
+            val floatPcm = FloatArray(pcmData.size) { pcmData[it].toFloat() / 32768.0f }
+            val feat = mfcc.compute(floatPcm)
+            if (feat.isEmpty()) return null
+            
+            val normalizedFeat = normalize(feat)
+            val numFrames = normalizedFeat.size
+            val featDim = normalizedFeat[0].size
             val batchSize = 1L
-            val seqLen = feat.size.toLong()
-            val featDim = 40L 
+            val seqLen = numFrames.toLong()
             
-            val flatFeat = FloatArray((batchSize * seqLen * featDim).toInt())
-            for (t in 0 until feat.size) {
-                val frame = feat[t]
-                for (d in 0 until 40) {
-                    flatFeat[t * 40 + d] = frame[d]
-                }
+            val inputBuffer = FloatBuffer.allocate(numFrames * featDim)
+            for (frame in normalizedFeat) {
+                inputBuffer.put(frame)
             }
-
-            val inputBuffer = FloatBuffer.wrap(flatFeat)
-            val inputTensor = OnnxTensor.createTensor(env, inputBuffer, longArrayOf(batchSize, seqLen, featDim))
+            inputBuffer.rewind()
+            
+            val inputTensor = OnnxTensor.createTensor(env, inputBuffer, longArrayOf(batchSize, seqLen, featDim.toLong()))
             
             val lengthsBuffer = LongBuffer.wrap(longArrayOf(seqLen))
             val lengthsTensor = OnnxTensor.createTensor(env, lengthsBuffer, longArrayOf(1))
             
-            val inputs = mapOf(
-                "input_tensor" to inputTensor,
-                "input_lengths" to lengthsTensor
-            )
-            
-            Log.d(TAG, "Running ONNX inference with seqLen $seqLen...")
-            val results = session.run(inputs)
+            val results = session.run(mapOf("input" to inputTensor, "input_lengths" to lengthsTensor))
             val outputTensor = results[0] as OnnxTensor
             val outputFloatArray = outputTensor.floatBuffer.array()
-            val numPhones = 39 // eng2102 has 39 phones
             
-            Log.d(TAG, "ONNX inference successful. Output array size: ${outputFloatArray.size}")
-
-            val decodedPhones = mutableListOf<String>()
-            var lastPhoneId = -1
-            
-            val threshold = -3.0f 
-
-            for (t in 0 until seqLen.toInt()) {
-                var maxVal = -Float.MAX_VALUE
-                var maxId = -1
-                
+            val numPhones = phoneMap.size
+            val tokens = mutableListOf<String>()
+            for (t in 0 until numFrames) {
+                var maxIdx = -1
+                var maxVal = Float.NEGATIVE_INFINITY
                 for (p in 0 until numPhones) {
-                    val v = outputFloatArray[t * numPhones + p]
-                    if (v > maxVal) {
-                        maxVal = v
-                        maxId = p
+                    val score = outputFloatArray[t * numPhones + p]
+                    if (score > maxVal) {
+                        maxVal = score
+                        maxIdx = p
                     }
                 }
-                
-                if (maxId != 0 && maxId != lastPhoneId && maxVal > threshold) {
-                    phoneMap[maxId]?.let { decodedPhones.add(it) }
+                if (maxIdx != -1) {
+                    val phone = phoneMap[maxIdx]
+                    if (phone != null && phone != "<blk>" && phone != "<sil>") {
+                        if (tokens.isEmpty() || tokens.last() != phone) {
+                            tokens.add(phone)
+                        }
+                    }
                 }
-                lastPhoneId = maxId
             }
-
-            val result = decodedPhones.joinToString(" ")
-            Log.d(TAG, "Recognition result: $result")
-            return result
-
+            
+            return tokens.joinToString(" ")
         } catch (e: Exception) {
-            Log.e(TAG, "Recognition failed with exception", e)
+            Log.e(TAG, "Recognition failed", e)
             return null
         }
     }
 
-    private fun applyCmvn(feat: Array<FloatArray>): Array<FloatArray> {
+    private fun normalize(feat: Array<FloatArray>): Array<FloatArray> {
         if (feat.isEmpty()) return feat
         val numFrames = feat.size
         val dim = feat[0].size
         val mean = FloatArray(dim)
         val std = FloatArray(dim)
-
-        for (t in 0 until numFrames) {
-            val frame = feat[t]
-            for (d in 0 until dim) mean[d] += frame[d]
-        }
-        val framesCount = numFrames.toFloat()
-        for (d in 0 until dim) mean[d] /= framesCount
-
-        for (t in 0 until numFrames) {
-            val frame = feat[t]
-            for (d in 0 until dim) {
-                val diff = frame[d] - mean[d]
-                std[d] += diff * diff
-            }
-        }
+        
         for (d in 0 until dim) {
-            val s = sqrt(((std[d] / framesCount) + 1e-10f).toDouble()).toFloat()
-            std[d] = if (s < 1e-10f) 1.0f else s
+            var sum = 0.0
+            for (t in 0 until numFrames) sum += feat[t][d]
+            mean[d] = (sum / numFrames).toFloat()
+            
+            var sumSq = 0.0
+            for (t in 0 until numFrames) sumSq += (feat[t][d] - mean[d]) * (feat[t][d] - mean[d])
+            std[d] = sqrt(sumSq / numFrames).toFloat() + 1e-9f
         }
-
+        
         return Array(numFrames) { t ->
             val frame = feat[t]
             FloatArray(dim) { d -> (frame[d] - mean[d]) / std[d] }
         }
-    }
-    
-    fun close() {
-        ortSession?.close()
-        ortEnv?.close()
     }
 }

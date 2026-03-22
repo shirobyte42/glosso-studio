@@ -14,7 +14,10 @@ Builds:
     commit: v0.1.0
     gradle:
       - :androidApp:assembleRelease
-    prebuild: rm -rf data/*.db && rm -rf androidApp/src/main/assets/*.db && sed -i '/git lfs pull/d' gradlew || true
+    prebuild:
+      - rm -rf data/*.db
+      - rm -rf androidApp/src/main/assets/*.db
+      - sed -i '/git lfs pull/d' gradlew || true
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

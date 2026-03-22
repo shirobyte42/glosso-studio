@@ -33,8 +33,43 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshStats()
+    // Removed manual refreshStats call as checkDatabaseAndRefresh handles it in ViewModel init
+    // LaunchedEffect(Unit) {
+    //    viewModel.refreshStats()
+    // }
+
+    if (state.isDownloading) {
+        AlertDialog(
+            onDismissRequest = { },
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            title = { Text("Downloading Database", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("This is a one-time setup of approximately 500MB.", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    LinearProgressIndicator(
+                        progress = state.downloadProgress,
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("${(state.downloadProgress * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+            },
+            confirmButton = { }
+        )
+    }
+
+    if (state.downloadError != null) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Download Failed") },
+            text = { Text(state.downloadError ?: "Unknown error occurred during setup.") },
+            confirmButton = {
+                Button(onClick = { viewModel.refreshStats() }) {
+                    Text("RETRY")
+                }
+            }
+        )
     }
 
     if (showResetDialog) {

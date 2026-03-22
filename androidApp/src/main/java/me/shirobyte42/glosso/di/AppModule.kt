@@ -12,18 +12,21 @@ import me.shirobyte42.glosso.presentation.studio.StudioViewModel
 
 import me.shirobyte42.glosso.data.local.LocalSentenceDataSource
 import me.shirobyte42.glosso.data.local.GlossoDatabase
+import me.shirobyte42.glosso.data.local.DatabaseDownloader
 import androidx.room.Room
 import me.shirobyte42.glosso.data.repository.GlossoRepositoryImpl
 import me.shirobyte42.glosso.domain.repository.GlossoRepository
 
 val appModule = module {
+    single { DatabaseDownloader(get(), get()) }
+
     single { 
         Room.databaseBuilder(
             get(),
             GlossoDatabase::class.java,
             GlossoDatabase.DATABASE_NAME
         )
-        .createFromAsset("sentences.db")
+        // No longer using .createFromAsset("sentences.db")
         .fallbackToDestructiveMigration()
         .build()
     }
@@ -40,7 +43,7 @@ val appModule = module {
     // Override the common repository with one that has the local data source
     single<GlossoRepository> { GlossoRepositoryImpl(get(), get<LocalSentenceDataSource>()) }
     
-    viewModel { HomeViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { 
 
         StudioViewModel(

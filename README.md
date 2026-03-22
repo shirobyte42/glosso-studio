@@ -8,10 +8,11 @@ Glosso Studio is an offline-first pronunciation training application built with 
 The application uses the Allosaurus model (specifically `eng2102`) to perform phonetic recognition. It processes 8kHz audio, computes Mel-frequency cepstral coefficients (MFCCs), and runs inference via ONNX Runtime to provide feedback on pronunciation accuracy.
 
 ### Offline-First Architecture
-All recognition and curriculum data are stored locally.
-- **ONNX Runtime:** Executes the acoustic model directly on the device.
-- **Room Database:** Manages a large-scale repository of practice sentences and user progress.
-- **Git LFS:** Handles large binary assets (models and database) to ensure repository performance.
+The application is designed to be fully functional offline once the initial assets are retrieved.
+- **ONNX Runtime:** Executes the acoustic model (`eng2102`) directly on the device.
+- **Dynamic Database Download:** To keep the APK size minimal, the `sentences.db` (approx. 500MB) is downloaded from GitHub Releases on first launch and stored in the local Room database path.
+- **Room Database:** Manages the repository of practice sentences and user progress.
+- **Git LFS:** Used for managing large binary assets in the repository.
 
 ### Mastery and Progress Tracking
 - **Curriculum Levels:** Six difficulty tiers ranging from Beginner to Mastery.

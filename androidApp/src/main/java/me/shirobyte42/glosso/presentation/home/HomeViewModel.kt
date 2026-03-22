@@ -11,11 +11,13 @@ import me.shirobyte42.glosso.domain.repository.GlossoRepository
 import me.shirobyte42.glosso.domain.repository.PreferenceRepository
 import me.shirobyte42.glosso.data.local.DatabaseDownloader
 import me.shirobyte42.glosso.data.local.DownloadProgress
+import me.shirobyte42.glosso.data.audio.AllosaurusRecognizer
 
 class HomeViewModel(
     private val repository: GlossoRepository,
     private val prefs: PreferenceRepository,
-    private val downloader: DatabaseDownloader
+    private val downloader: DatabaseDownloader,
+    private val recognizer: AllosaurusRecognizer
 ) : ViewModel() {
     private val TAG = "HomeViewModel"
 
@@ -55,18 +57,23 @@ class HomeViewModel(
     }
 
     fun startInitialSetup() {
-        _uiState.update { it.copy(isDownloading = true, isInitialSetupRequired = false) }
+        Log.d(TAG, "Starting initial setup download...")
+        _uiState.update { it.copy(isDownloading = true, isInitialSetupRequired = false, downloadProgress = 0f) }
         viewModelScope.launch {
             downloader.downloadRequiredAssets().collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
+                        Log.d(TAG, "Initial setup progress: ${progress.percent}")
                         _uiState.update { it.copy(downloadProgress = progress.percent) }
                     }
                     is DownloadProgress.Success -> {
+                        Log.d(TAG, "Initial setup successful!")
+                        recognizer.initialize() // Load the model we just downloaded
                         _uiState.update { it.copy(isDownloading = false, downloadProgress = 1f) }
                         refreshStats()
                     }
                     is DownloadProgress.Error -> {
+                        Log.e(TAG, "Initial setup failed: ${progress.message}")
                         _uiState.update { it.copy(isDownloading = false, downloadError = progress.message) }
                     }
                 }
@@ -133,7 +140,8 @@ class HomeViewModel(
             _uiState.update { it.copy(
                 masteryScore = totalMastery,
                 levelStats = levelStats,
-                levelProgress = levelStats.map { it.progress }
+                levelProgress = levelStats.map { it.progress },
+                pendingLevelIndex = null
             ) }
         }
     }

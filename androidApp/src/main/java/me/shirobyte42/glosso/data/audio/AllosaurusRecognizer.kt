@@ -22,25 +22,33 @@ class AllosaurusRecognizer(private val context: Context) {
     private val mfcc = Mfcc() // 8kHz, 40 cepstral coefficients
 
     init {
+        initialize()
+    }
+
+    fun initialize() {
+        if (ortSession != null) return // Already initialized
+        
         try {
             Log.d(TAG, "Initializing OrtEnvironment...")
-            ortEnv = OrtEnvironment.getEnvironment()
+            if (ortEnv == null) {
+                ortEnv = OrtEnvironment.getEnvironment()
+            }
             
             val modelFile = File(context.filesDir, "allosaurus_eng2102.onnx")
             if (!modelFile.exists()) {
                 Log.e(TAG, "CRITICAL: model NOT FOUND in files!")
-            } else {
-                Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
-                val modelBytes = modelFile.readBytes()
-                Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
-                
-                Log.d(TAG, "Creating OrtSession...")
-                // Using explicit cast to avoid ambiguity
-                ortSession = ortEnv?.createSession(modelBytes as ByteArray)
-                
-                Log.d(TAG, "Loading English phone map...")
-                phoneMap = loadPhoneMap()
+                return
             }
+
+            Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
+            val modelBytes = modelFile.readBytes()
+            Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
+            
+            Log.d(TAG, "Creating OrtSession...")
+            ortSession = ortEnv?.createSession(modelBytes)
+            
+            Log.d(TAG, "Loading English phone map...")
+            phoneMap = loadPhoneMap()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AllosaurusRecognizer", e)
         }

@@ -93,11 +93,13 @@ fun HomeScreen(
 
     if (state.isDownloading) {
         val levelsNames = listOf("Beginner", "Elementary", "Intermediate", "Upper-Int", "Advanced", "Mastery")
-        val levelName = state.pendingLevelIndex?.let { levelsNames.getOrNull(it) } ?: ""
+        val levelName = state.pendingLevelIndex?.let { levelsNames.getOrNull(it) }
+        val titleText = if (levelName != null) "Downloading $levelName" else "Initial Setup"
+        
         AlertDialog(
             onDismissRequest = { },
             properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-            title = { Text("Downloading $levelName", fontWeight = FontWeight.Bold) },
+            title = { Text(titleText, fontWeight = FontWeight.Bold) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                     Text("Preparing your curriculum...", style = MaterialTheme.typography.bodyMedium)

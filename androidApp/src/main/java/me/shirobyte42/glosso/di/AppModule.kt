@@ -61,7 +61,7 @@ val appModule = module {
     single<GlossoRepository> { GlossoRepositoryImpl(get(), get<LocalSentenceDataSource>()) }
 
     
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { (levelIndex: Int) ->
         // Use the factory to get the database for the specific level
         val levelDb: GlossoDatabase = get(qualifier = org.koin.core.qualifier.named("level_db")) { parametersOf(levelIndex) }

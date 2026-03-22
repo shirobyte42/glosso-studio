@@ -21,6 +21,7 @@ import java.io.File
 
 class StudioViewModel(
     private val repository: GlossoRepository,
+    private val sentenceDao: SentenceDao,
     private val speechController: SpeechController,
     private val prefs: PreferenceRepository,
     private val updateMastery: UpdateMasteryUseCase

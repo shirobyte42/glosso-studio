@@ -32,9 +32,9 @@ val commonModule = module {
                 level = LogLevel.INFO
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 60000 // 60s
-                connectTimeoutMillis = 30000 // 30s
-                socketTimeoutMillis = 60000  // 60s
+                requestTimeoutMillis = null // Infinite for large files
+                connectTimeoutMillis = 60000 // 60s
+                socketTimeoutMillis = 300000  // 5m
             }
         }
     }

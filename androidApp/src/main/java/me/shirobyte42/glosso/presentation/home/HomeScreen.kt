@@ -34,16 +34,18 @@ fun HomeScreen(
     var showResetDialog by remember { mutableStateOf(false) }
 
     if (state.isDownloadRequired) {
+        val levelsNames = listOf("Beginner", "Elementary", "Intermediate", "Upper-Int", "Advanced", "Mastery")
+        val levelName = state.pendingLevelIndex?.let { levelsNames.getOrNull(it) } ?: "this level"
         AlertDialog(
-            onDismissRequest = { },
-            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            onDismissRequest = { viewModel.refreshStats() },
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true),
             title = { Text("Setup Required", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Glosso Studio requires a one-time download of the curriculum database (approx. 500MB).")
+                    Text("Glosso Studio requires a one-time download for the $levelName curriculum (approx. 50-100MB).")
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "WARNING: This is a large file. If you are using mobile data, significant costs may apply. We recommend using a Wi-Fi connection.",
+                        "WARNING: If you are using mobile data, significant costs may apply. We recommend using a Wi-Fi connection.",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold
@@ -55,20 +57,22 @@ fun HomeScreen(
                     onClick = { viewModel.startDownload() },
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("DOWNLOAD NOW")
+                    Text("DOWNLOAD")
                 }
             }
         )
     }
 
     if (state.isDownloading) {
+        val levelsNames = listOf("Beginner", "Elementary", "Intermediate", "Upper-Int", "Advanced", "Mastery")
+        val levelName = state.pendingLevelIndex?.let { levelsNames.getOrNull(it) } ?: ""
         AlertDialog(
             onDismissRequest = { },
             properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-            title = { Text("Downloading Database", fontWeight = FontWeight.Bold) },
+            title = { Text("Downloading $levelName", fontWeight = FontWeight.Bold) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("This is a one-time setup of approximately 500MB.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Preparing your curriculum...", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(24.dp))
                     LinearProgressIndicator(
                         progress = state.downloadProgress,
@@ -101,11 +105,11 @@ fun HomeScreen(
             title = { Text("Reset Progress?") },
             text = { Text("This will clear your mastery data and reset the curriculum. This cannot be undone.") },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     viewModel.resetProgress()
                     showResetDialog = false
-                }) {
-                    Text("RESET", color = MaterialTheme.colorScheme.error)
+                }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                    Text("RESET")
                 }
             },
             dismissButton = {
@@ -142,7 +146,6 @@ fun HomeScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stats Row: Balanced spacing
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -195,7 +198,8 @@ fun HomeScreen(
                         progress = stat.progress,
                         masteredCount = stat.mastered,
                         totalCount = stat.total,
-                        onClick = { onNavigateToStudio(index) }
+                        isDownloaded = stat.isDownloaded,
+                        onClick = { viewModel.onLevelClick(index, onNavigateToStudio) }
                     )
                 }
             }
@@ -235,6 +239,7 @@ fun LevelCard(
     progress: Float, 
     masteredCount: Int,
     totalCount: Int,
+    isDownloaded: Boolean,
     onClick: () -> Unit
 ) {
     val completeColor = MaterialTheme.colorScheme.secondary
@@ -254,20 +259,36 @@ fun LevelCard(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                LinearProgressIndicator(
-                    progress = progress,
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                    color = if (progress >= 1f) completeColor else MaterialTheme.colorScheme.primary,
-                    trackColor = Color.LightGray.copy(alpha = 0.2f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (progress >= 1f) "COMPLETE" else "$masteredCount / $totalCount",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (progress >= 1f) completeColor else Color.Gray,
-                    fontWeight = FontWeight.Bold
-                )
+            if (isDownloaded) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    LinearProgressIndicator(
+                        progress = progress,
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                        color = if (progress >= 1f) completeColor else MaterialTheme.colorScheme.primary,
+                        trackColor = Color.LightGray.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (progress >= 1f) "COMPLETE" else "$masteredCount / $totalCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (progress >= 1f) completeColor else Color.Gray,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = CircleShape,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "TAP TO SETUP",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
     }

@@ -8,33 +8,33 @@ import me.shirobyte42.glosso.domain.repository.LocalSentenceProvider
 
 class LocalSentenceDataSource(
     private val context: Context,
-    private val sentenceDao: SentenceDao
+    private val sentenceDaoProvider: (Int) -> SentenceDao
 ) : LocalSentenceProvider {
 
     override suspend fun getTopics(category: Int, language: String): List<String> = withContext(Dispatchers.IO) {
         val levelKey = getLevelKey(category)
-        sentenceDao.getTopicsByLevel(levelKey, language)
+        sentenceDaoProvider(category).getTopicsByLevel(levelKey, language)
     }
 
     override suspend fun getSentenceCount(category: Int, language: String): Int = withContext(Dispatchers.IO) {
         val levelKey = getLevelKey(category)
-        sentenceDao.getSentenceCountByLevel(levelKey, language)
+        sentenceDaoProvider(category).getSentenceCountByLevel(levelKey, language)
     }
 
     override suspend fun getSample(category: Int, language: String, topics: List<String>?, exclude: List<String>): Sentence = withContext(Dispatchers.IO) {
         val levelKey = getLevelKey(category)
+        val dao = sentenceDaoProvider(category)
         
         // Ensure exclude list is not empty for IN clause by adding an impossible value if needed
-        // though Room usually handles empty lists in IN clauses gracefully
         val excludeList = if (exclude.isEmpty()) listOf("---") else exclude
 
         // Try to get from DB
         val entity = when {
             topics != null && topics.isNotEmpty() -> {
-                sentenceDao.getRandomSentenceByLevelAndTopics(levelKey, topics, language, excludeList)
+                dao.getRandomSentenceByLevelAndTopics(levelKey, topics, language, excludeList)
             }
             else -> {
-                sentenceDao.getRandomSentenceByLevel(levelKey, language, excludeList)
+                dao.getRandomSentenceByLevel(levelKey, language, excludeList)
             }
         }
         

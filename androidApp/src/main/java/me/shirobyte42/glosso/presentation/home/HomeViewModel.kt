@@ -24,7 +24,7 @@ class HomeViewModel(
 
     init {
         Log.d(TAG, "Initializing HomeViewModel")
-        checkDatabaseAndRefresh()
+        refreshStats()
         viewModelScope.launch {
             prefs.getMasteryStreakFlow().collect { streak ->
                 Log.d(TAG, "Streak updated from flow: $streak")
@@ -33,19 +33,20 @@ class HomeViewModel(
         }
     }
 
-    private fun checkDatabaseAndRefresh() {
-        if (downloader.isDatabaseDownloaded()) {
-            _uiState.update { it.copy(isDownloadRequired = false) }
-            refreshStats()
+    fun onLevelClick(levelIndex: Int, onNavigate: (Int) -> Unit) {
+        if (downloader.isLevelDownloaded(levelIndex)) {
+            onNavigate(levelIndex)
         } else {
-            _uiState.update { it.copy(isDownloadRequired = true) }
+            _uiState.update { it.copy(pendingLevelIndex = levelIndex, isDownloadRequired = true) }
         }
     }
 
     fun startDownload() {
+        val levelIndex = _uiState.value.pendingLevelIndex ?: return
         _uiState.update { it.copy(isDownloading = true, isDownloadRequired = false) }
+        
         viewModelScope.launch {
-            downloader.downloadDatabase().collect { progress ->
+            downloader.downloadLevel(levelIndex).collect { progress ->
                 when (progress) {
                     is DownloadProgress.Progress -> {
                         _uiState.update { it.copy(downloadProgress = progress.percent) }
@@ -66,27 +67,30 @@ class HomeViewModel(
         Log.d(TAG, "Refreshing dashboard stats")
         _uiState.update { it.copy(downloadError = null) }
         
-        if (!downloader.isDatabaseDownloaded()) {
-            checkDatabaseAndRefresh()
-            return
-        }
-
         viewModelScope.launch {
             val totalMastery = prefs.getTotalMasteryCount()
             
             val levelStats = (0 until 6).map { levelIndex ->
                 val mastered = prefs.getMasteryCountForCategory(levelIndex)
-                val total = try {
-                    repository.getSentenceCount(levelIndex, "en")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to get count for level $levelIndex", e)
+                
+                // Only try to get total if downloaded, otherwise use a placeholder or 0
+                val total = if (downloader.isLevelDownloaded(levelIndex)) {
+                    try {
+                        repository.getSentenceCount(levelIndex, "en")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to get count for level $levelIndex", e)
+                        0
+                    }
+                } else {
                     0
                 }
+                
                 val safeTotal = if (total <= 0) 1 else total
                 LevelStat(
                     mastered = mastered,
                     total = total,
-                    progress = (mastered.toFloat() / safeTotal.toFloat()).coerceAtMost(1.0f)
+                    progress = if (total > 0) (mastered.toFloat() / total.toFloat()).coerceAtMost(1.0f) else 0f,
+                    isDownloaded = downloader.isLevelDownloaded(levelIndex)
                 )
             }
 
@@ -110,7 +114,8 @@ class HomeViewModel(
 data class LevelStat(
     val mastered: Int,
     val total: Int,
-    val progress: Float
+    val progress: Float,
+    val isDownloaded: Boolean = false
 )
 
 data class HomeUiState(
@@ -122,5 +127,6 @@ data class HomeUiState(
     val isDownloadRequired: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
-    val downloadError: String? = null
+    val downloadError: String? = null,
+    val pendingLevelIndex: Int? = null
 )

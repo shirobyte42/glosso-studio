@@ -30,7 +30,7 @@ fun TopicSelectionScreen(
     levelIndex: Int,
     onNavigateBack: () -> Unit,
     onStartPractice: (Int, List<String>) -> Unit,
-    viewModel: StudioViewModel = koinViewModel()
+    viewModel: StudioViewModel = koinViewModel { org.koin.core.parameter.parametersOf(levelIndex) }
 ) {
     val state by viewModel.uiState.collectAsState()
     val levelNames = listOf("Beginner", "Elementary", "Intermediate", "Upper-Int", "Advanced", "Mastery")

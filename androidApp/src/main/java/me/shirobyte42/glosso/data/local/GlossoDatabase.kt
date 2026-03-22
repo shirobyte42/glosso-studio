@@ -14,6 +14,7 @@ abstract class GlossoDatabase : RoomDatabase() {
     abstract val activityDayDao: ActivityDayDao
 
     companion object {
-        const val DATABASE_NAME = "glosso_db"
+        fun getDatabaseName(levelIndex: Int) = "sentences_$levelIndex.db"
+        const val PROGRESS_DATABASE_NAME = "glosso_progress_db"
     }
 }

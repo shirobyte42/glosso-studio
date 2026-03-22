@@ -83,7 +83,7 @@ fun StudioScreen(
     category: Int, // levelIndex (0-5)
     topics: List<String>? = null,
     onNavigateToSettings: () -> Unit,
-    viewModel: StudioViewModel = koinViewModel()
+    viewModel: StudioViewModel = koinViewModel { org.koin.core.parameter.parametersOf(category) }
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current

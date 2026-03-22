@@ -20,37 +20,33 @@ class DatabaseDownloader(
     private val context: Context,
     private val client: HttpClient
 ) {
-    private val DB_NAME = "sentences.db"
+    private fun getDbName(levelIndex: Int) = "sentences_$levelIndex.db"
     
-    private val DOWNLOAD_URL: String by lazy {
+    private fun getDownloadUrl(levelIndex: Int): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val versionName = packageInfo.versionName
-        "https://github.com/shirobyte42/glosso-studio/releases/download/v$versionName/sentences.db"
+        return "https://github.com/shirobyte42/glosso-studio/releases/download/v$versionName/${getDbName(levelIndex)}"
     }
 
-    fun getDatabaseFile(): File {
-        return context.getDatabasePath(DB_NAME)
+    fun getDatabaseFile(levelIndex: Int): File {
+        return context.getDatabasePath(getDbName(levelIndex))
     }
 
-    /**
-     * Checks if the database is already fully downloaded.
-     * Note: This is synchronous and only checks local state. 
-     * Use [verifyAndDownload] for a more robust check.
-     */
-    fun isDatabaseDownloaded(): Boolean {
-        val file = getDatabaseFile()
-        // Simple check: exists and is large enough to be the real DB (not an error page)
-        // The sentences.db v0.1.0 is ~542MB.
-        return file.exists() && file.length() > 500 * 1024 * 1024
+    fun isLevelDownloaded(levelIndex: Int): Boolean {
+        val file = getDatabaseFile(levelIndex)
+        // Check if file exists and has some data. 
+        // Specific size checks are done during the download flow.
+        return file.exists() && file.length() > 1024 * 1024 // > 1MB
     }
 
-    fun downloadDatabase(): Flow<DownloadProgress> = callbackFlow {
-        val file = getDatabaseFile()
+    fun downloadLevel(levelIndex: Int): Flow<DownloadProgress> = callbackFlow {
+        val file = getDatabaseFile(levelIndex)
         file.parentFile?.mkdirs()
+        val url = getDownloadUrl(levelIndex)
 
         try {
-            // 1. Check file size on server to verify completeness
-            val headResponse = client.head(DOWNLOAD_URL)
+            // 1. Verify size
+            val headResponse = client.head(url)
             val expectedSize = headResponse.contentLength() ?: -1L
 
             if (file.exists() && expectedSize != -1L && file.length() == expectedSize) {
@@ -59,14 +55,12 @@ class DatabaseDownloader(
                 return@callbackFlow
             }
 
-            // 2. Start/Restart download if size mismatch or file missing
-            // If it exists but is smaller, we'll overwrite it for now to ensure integrity.
-            // Future improvement: implement Range-based resume.
-            if (file.exists() && file.length() != expectedSize) {
+            if (file.exists() && expectedSize != -1L && file.length() != expectedSize) {
                 file.delete()
             }
 
-            client.prepareGet(DOWNLOAD_URL) {
+            // 2. Download
+            client.prepareGet(url) {
                 onDownload { bytesSentTotal, contentLength ->
                     if (contentLength != null && contentLength > 0) {
                         trySend(DownloadProgress.Progress(bytesSentTotal.toFloat() / contentLength))
@@ -75,7 +69,6 @@ class DatabaseDownloader(
             }.execute { response ->
                 if (response.status.isSuccess()) {
                     val channel = response.bodyAsChannel()
-                    
                     withContext(Dispatchers.IO) {
                         FileOutputStream(file).use { output ->
                             channel.toInputStream().copyTo(output)
@@ -84,7 +77,7 @@ class DatabaseDownloader(
                     trySend(DownloadProgress.Success)
                     close()
                 } else {
-                    trySend(DownloadProgress.Error("Failed to download: ${response.status}"))
+                    trySend(DownloadProgress.Error("Failed to download level $levelIndex: ${response.status}"))
                     close()
                 }
             }

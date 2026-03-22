@@ -16,7 +16,7 @@ Builds:
     commit: 88fac847d51bd9ba12f522ce75f70f03e75c2937
     subdir: androidApp
     gradle:
-      - fdroid
+      - yes
     prebuild: rm -rf ../data/*.db && sed -i '/org.gradle.java.home/d' ../gradle.properties && sed -i '/git lfs pull/d' ../gradlew || true
 
 AutoUpdateMode: Version

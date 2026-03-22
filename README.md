@@ -8,4 +8,9 @@ Glosso Studio is a professional pronunciation trainer built with Kotlin Multipla
 - Mastery & Streak System
 
 ## License
-AGPLv3
+This project is licensed under the **GNU Affero General Public License v3 (AGPLv3)**. 
+
+See the [LICENSE](LICENSE) file for the full license text.
+
+---
+*Glosso Studio © 2026*

@@ -33,10 +33,33 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
 
-    // Removed manual refreshStats call as checkDatabaseAndRefresh handles it in ViewModel init
-    // LaunchedEffect(Unit) {
-    //    viewModel.refreshStats()
-    // }
+    if (state.isDownloadRequired) {
+        AlertDialog(
+            onDismissRequest = { },
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            title = { Text("Setup Required", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Glosso Studio requires a one-time download of the curriculum database (approx. 500MB).")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "WARNING: This is a large file. If you are using mobile data, significant costs may apply. We recommend using a Wi-Fi connection.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.startDownload() },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("DOWNLOAD NOW")
+                }
+            }
+        )
+    }
 
     if (state.isDownloading) {
         AlertDialog(

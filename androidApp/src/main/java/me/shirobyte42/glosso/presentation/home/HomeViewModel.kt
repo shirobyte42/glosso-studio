@@ -35,14 +35,15 @@ class HomeViewModel(
 
     private fun checkDatabaseAndRefresh() {
         if (downloader.isDatabaseDownloaded()) {
+            _uiState.update { it.copy(isDownloadRequired = false) }
             refreshStats()
         } else {
-            _uiState.update { it.copy(isDownloading = true) }
-            startDownload()
+            _uiState.update { it.copy(isDownloadRequired = true) }
         }
     }
 
-    private fun startDownload() {
+    fun startDownload() {
+        _uiState.update { it.copy(isDownloading = true, isDownloadRequired = false) }
         viewModelScope.launch {
             downloader.downloadDatabase().collect { progress ->
                 when (progress) {
@@ -118,6 +119,7 @@ data class HomeUiState(
     val levelProgress: List<Float> = List(6) { 0f },
     val levelStats: List<LevelStat> = List(6) { LevelStat(0, 10, 0f) },
     val isLoading: Boolean = false,
+    val isDownloadRequired: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
     val downloadError: String? = null

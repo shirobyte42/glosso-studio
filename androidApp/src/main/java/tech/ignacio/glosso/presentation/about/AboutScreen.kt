@@ -136,7 +136,29 @@ fun AboutScreen(
                         )
                     }
 
-                    BulletPoint("Developer: shirobyte42 — standing on the shoulders of giants.")
+                    val devString = buildAnnotatedString {
+                        append("Developer: ")
+                        pushStringAnnotation(tag = "URL", annotation = "https://github.com/shirobyte42")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold)) {
+                            append("shirobyte42")
+                        }
+                        pop()
+                        append(" — standing on the shoulders of giants.")
+                    }
+                    
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text("• ", style = MaterialTheme.typography.bodyMedium)
+                        androidx.compose.foundation.text.ClickableText(
+                            text = devString,
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                            onClick = { offset ->
+                                devString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        uriHandler.openUri(annotation.item)
+                                    }
+                            }
+                        )
+                    }
                 }
             }
             

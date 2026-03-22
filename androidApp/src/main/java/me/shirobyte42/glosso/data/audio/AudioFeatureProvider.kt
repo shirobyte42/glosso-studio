@@ -4,29 +4,29 @@ import java.util.Random
 import kotlin.math.*
 
 /**
- * MFCC implementation matching python_speech_features/Allosaurus exactly.
+ * Feature provider for Allosaurus eng2102. 
+ * Replicates the official pm_config parameters.
  */
-class Mfcc(
+class AudioFeatureProvider(
     private val sampleRate: Int = 8000,
     private val numCep: Int = 40,
-    private val numFilters: Int = 40,
+    private val nFilt: Int = 40,
     private val lowFreq: Double = 40.0,
     private val highFreq: Double = 3800.0,
     private val winLen: Double = 0.025,
     private val winStep: Double = 0.01,
     private val preemph: Double = 0.97,
-    private val winType: String = "povey",
-    private val cepLifter: Int = 22,
-    private val dither: Double = 1.0
+    private val ceplifter: Int = 22
 ) {
     private val frameLen = (winLen * sampleRate).roundToInt()
     private val frameStep = (winStep * sampleRate).roundToInt()
     private val nfft = nextPowerOfTwo(frameLen)
-    private val window = getWindow(frameLen, winType)
-    private val melFilterBank = getFilterBanks(numFilters, nfft, sampleRate, lowFreq, highFreq)
-    private val random = Random()
+    private val window = FloatArray(frameLen) { i ->
+        (0.5 - 0.5 * cos(2.0 * PI * i / (frameLen - 1))).pow(0.85).toFloat()
+    }
+    private val melFilterBank = getFilterBanks(nFilt, nfft, sampleRate, lowFreq, highFreq)
 
-    fun compute(signal: FloatArray): Array<FloatArray> {
+    fun computeFeatures(signal: FloatArray): Array<FloatArray> {
         val slen = signal.size
         val numFrames = if (slen <= frameLen) 1 else 1 + (slen - frameLen) / frameStep
         val feat = Array(numFrames) { FloatArray(numCep) }
@@ -34,54 +34,40 @@ class Mfcc(
         for (i in 0 until numFrames) {
             val start = i * frameStep
             val frame = FloatArray(frameLen)
-            for (j in 0 until frameLen) {
-                if (start + j < slen) {
-                    // Apply dither
-                    val ditherVal = (random.nextGaussian() * dither).toFloat()
-                    frame[j] = signal[start + j] + ditherVal
-                }
-            }
-
-            // 1. Remove DC Offset
+            
             var sum = 0f
-            for (v in frame) sum += v
+            for (j in 0 until frameLen) {
+                val s = if (start + j < slen) signal[start + j] else 0f
+                frame[j] = s
+                sum += s
+            }
             val mean = sum / frameLen
             for (j in 0 until frameLen) frame[j] -= mean
 
-            // 2. Pre-emphasis (matching Allosaurus: (1-coeff)*x[0] for first sample)
-            val emphasizedFrame = FloatArray(frameLen)
-            emphasizedFrame[0] = (1.0 - preemph).toFloat() * frame[0]
+            val emphasized = FloatArray(frameLen)
+            emphasized[0] = (1.0 - preemph).toFloat() * frame[0]
             for (j in 1 until frameLen) {
-                emphasizedFrame[j] = frame[j] - (preemph * frame[j - 1]).toFloat()
+                emphasized[j] = frame[j] - (preemph * frame[j - 1]).toFloat()
             }
 
-            // 3. Windowing
-            for (j in 0 until frameLen) emphasizedFrame[j] *= window[j]
+            for (j in 0 until frameLen) emphasized[j] *= window[j]
+            val pspec = getPowerSpectrum(emphasized, nfft)
 
-            // 4. Power Spectrum (numpy.fft.rfft equivalent)
-            val pspec = getPowerSpectrum(emphasizedFrame, nfft)
-
-            // 5. Filterbank Energies
-            val fbEnergies = FloatArray(numFilters)
-            for (m in 0 until numFilters) {
-                var energy = 0f
+            val fbEnergies = FloatArray(nFilt)
+            for (m in 0 until nFilt) {
+                var e = 0f
                 for (k in 0 until (nfft / 2 + 1)) {
-                    energy += pspec[k] * melFilterBank[m][k]
+                    e += pspec[k] * melFilterBank[m][k]
                 }
-                // Allosaurus/python_speech_features does NOT divide by NFFT in fbank
-                fbEnergies[m] = max(energy, 2.220446049250313e-16f)
+                fbEnergies[m] = max(e, 2.220446049250313e-16f)
             }
 
-            // 6. Log
-            val logEnergies = FloatArray(numFilters) { m -> ln(fbEnergies[m]) }
-
-            // 7. DCT-II (Orthogonal normalization)
+            val logEnergies = FloatArray(nFilt) { m -> ln(fbEnergies[m]) }
             val dctFeat = dctType2Ortho(logEnergies, numCep)
             
-            // 8. Lifter
-            feat[i] = applyLifter(dctFeat, cepLifter)
+            // Note: Official config says use_energy: false, so we KEEP the DCT result at index 0
+            feat[i] = applyLifter(dctFeat, ceplifter)
         }
-
         return feat
     }
 
@@ -89,17 +75,6 @@ class Mfcc(
         var p = 1
         while (p < n) p = p shl 1
         return p
-    }
-
-    private fun getWindow(size: Int, type: String): FloatArray {
-        return FloatArray(size) { i ->
-            if (type == "povey") {
-                (0.5 - 0.5 * cos(2.0 * PI * i / (size - 1))).pow(0.85).toFloat()
-            } else {
-                // Hamming
-                (0.54 - 0.46 * cos(2.0 * PI * i / (size - 1))).toFloat()
-            }
-        }
     }
 
     private fun getPowerSpectrum(frame: FloatArray, nfft: Int): FloatArray {
@@ -151,7 +126,6 @@ class Mfcc(
     }
 
     private fun hzToMel(hz: Double): Double = 1127.0 * ln(1.0 + hz / 700.0)
-    private fun melToHz(mel: Double): Double = 700.0 * (exp(mel / 1127.0) - 1.0)
 
     private fun getFilterBanks(nfilt: Int, nfft: Int, samplerate: Int, lowfreq: Double, highfreq: Double): Array<FloatArray> {
         val lowMel = hzToMel(lowfreq)
@@ -182,7 +156,6 @@ class Mfcc(
         val N = data.size
         val factor0 = sqrt(1.0 / N)
         val factorK = sqrt(2.0 / N)
-        
         for (k in 0 until n) {
             var sum = 0.0
             for (i in 0 until N) {

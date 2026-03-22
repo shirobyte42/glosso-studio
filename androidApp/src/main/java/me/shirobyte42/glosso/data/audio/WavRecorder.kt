@@ -10,7 +10,7 @@ import java.io.FileOutputStream
 import java.io.RandomAccessFile
 
 class WavRecorder(private val file: File) {
-    // Record directly at 8000Hz to match Allosaurus uni2005 training
+    // Record directly at 8000Hz to match Allosaurus eng2102 requirements
     private val sampleRate = 8000
     private val channelConfig = AudioFormat.CHANNEL_IN_MONO
     private val audioFormat = AudioFormat.ENCODING_PCM_16BIT

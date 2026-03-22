@@ -19,14 +19,14 @@ class AllosaurusRecognizer(private val context: Context) {
     private var ortEnv: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
     private var phoneMap: Map<Int, String> = emptyMap()
-    private val mfcc = Mfcc() // 8kHz, 40 cepstral coefficients
+    private val featureProvider = AudioFeatureProvider(sampleRate = 8000)
 
     init {
         initialize()
     }
 
     fun initialize() {
-        if (ortSession != null) return // Already initialized
+        if (ortSession != null) return
         
         try {
             Log.d(TAG, "Initializing OrtEnvironment...")
@@ -40,15 +40,13 @@ class AllosaurusRecognizer(private val context: Context) {
                 return
             }
 
-            Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
             val modelBytes = modelFile.readBytes()
-            Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
-            
             Log.d(TAG, "Creating OrtSession...")
             ortSession = ortEnv?.createSession(modelBytes)
             
             Log.d(TAG, "Loading English phone map...")
             phoneMap = loadPhoneMap()
+            Log.d(TAG, "Initialization complete. Map size: ${phoneMap.size}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AllosaurusRecognizer", e)
         }
@@ -80,23 +78,16 @@ class AllosaurusRecognizer(private val context: Context) {
         val session = ortSession
         val env = ortEnv
         
-        if (session == null || env == null) {
-            Log.e(TAG, "ONNX Session or Environment is null!")
-            return null
-        }
+        if (session == null || env == null) return null
         
         try {
             val wavData = try {
                 Base64.decode(base64Wav, Base64.DEFAULT)
             } catch (e: Exception) {
-                Log.e(TAG, "Base64 decode failed", e)
                 return null
             }
 
-            if (wavData.size <= 44) {
-                Log.e(TAG, "WAV data too small")
-                return null
-            }
+            if (wavData.size <= 44) return null
             
             val pcmData = ShortArray((wavData.size - 44) / 2)
             for (i in pcmData.indices) {
@@ -106,37 +97,44 @@ class AllosaurusRecognizer(private val context: Context) {
             }
             
             val floatPcm = FloatArray(pcmData.size) { pcmData[it].toFloat() / 32768.0f }
-            val feat = mfcc.compute(floatPcm)
-            if (feat.isEmpty()) return null
             
-            val normalizedFeat = normalize(feat)
-            val numFrames = normalizedFeat.size
-            val featDim = normalizedFeat[0].size
+            // 1. Compute MFCCs (with Log Energy replacement)
+            val baseFeat = featureProvider.computeFeatures(floatPcm)
+            if (baseFeat.isEmpty()) return null
+            
+            // 2. CMVN (Speaker Normalization)
+            val feat = normalize(baseFeat)
+            
+            // 3. No stacking - model expects dim 40 directly
+            val numFrames = feat.size
+            val featDim = feat[0].size // 40
             val batchSize = 1L
             val seqLen = numFrames.toLong()
             
             val inputBuffer = FloatBuffer.allocate(numFrames * featDim)
-            for (frame in normalizedFeat) {
+            for (frame in feat) {
                 inputBuffer.put(frame)
             }
             inputBuffer.rewind()
             
             val inputTensor = OnnxTensor.createTensor(env, inputBuffer, longArrayOf(batchSize, seqLen, featDim.toLong()))
-            
             val lengthsBuffer = LongBuffer.wrap(longArrayOf(seqLen))
             val lengthsTensor = OnnxTensor.createTensor(env, lengthsBuffer, longArrayOf(1))
             
+            Log.d(TAG, "Running ONNX inference with $numFrames frames (dim: $featDim)...")
             val results = session.run(mapOf("input_tensor" to inputTensor, "input_lengths" to lengthsTensor))
             val outputTensor = results[0] as OnnxTensor
             val outputFloatArray = outputTensor.floatBuffer.array()
+            val outputShape = outputTensor.info.shape
             
-            val numPhones = phoneMap.size
+            val classesCount = outputShape[2].toInt()
             val tokens = mutableListOf<String>()
+            
             for (t in 0 until numFrames) {
                 var maxIdx = -1
                 var maxVal = Float.NEGATIVE_INFINITY
-                for (p in 0 until numPhones) {
-                    val score = outputFloatArray[t * numPhones + p]
+                for (p in 0 until classesCount) {
+                    val score = outputFloatArray[t * classesCount + p]
                     if (score > maxVal) {
                         maxVal = score
                         maxIdx = p
@@ -152,6 +150,7 @@ class AllosaurusRecognizer(private val context: Context) {
                 }
             }
             
+            Log.d(TAG, "Decoded tokens: ${tokens.joinToString(" ")}")
             return tokens.joinToString(" ")
         } catch (e: Exception) {
             Log.e(TAG, "Recognition failed", e)

@@ -188,14 +188,25 @@ object PhoneticComparator {
     }
 
     private fun getNormalizedPhoneList(ipa: String): List<String> {
-        // Remove punctuation, spaces, and stress marks
-        val raw = ipa.lowercase().replace(Regex("[ˈˌ. ,?!()\\- \u00A0\u0300-\u036F]"), "")
+        // 1. Remove punctuation, spaces, and combining diacritics except for the tie bar
+        // We keep \u0361 which is the combining double inverted breve (tie bar)
+        val raw = ipa.lowercase()
+            .replace(Regex("[ˈˌ. ,?!()\\- \u00A0]"), "")
+            .replace(Regex("[\u0300-\u0360\u0362-\u036F]"), "")
         
         val result = mutableListOf<String>()
-        // Just treat each remaining character as a phone unit for now 
-        // since we removed the multi-char phoneticGroups mapping.
-        for (char in raw) {
-            result.add(char.toString())
+        var i = 0
+        while (i < raw.length) {
+            val char = raw[i]
+            
+            // Check for affricates/tied phonemes (e.g., d + \u0361 + ʒ)
+            if (i + 2 < raw.length && raw[i + 1] == '\u0361') {
+                result.add(raw.substring(i, i + 3))
+                i += 3
+            } else {
+                result.add(char.toString())
+                i++
+            }
         }
         
         // Collapse duplicates (e.g. "hh" -> "h")

@@ -5,6 +5,8 @@ AuthorName: ShiroByte42
 SourceCode: https://gitlab.com/shirobyte421/glosso-studio
 IssueTracker: https://gitlab.com/shirobyte421/glosso-studio/-/issues
 
+AutoName: Glosso
+
 RepoType: git
 Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 
@@ -14,11 +16,8 @@ Builds:
     commit: v0.1.0
     gradle:
       - :androidApp:assembleRelease
-    prebuild:
-      - rm -rf data/*.db
-      - rm -rf androidApp/src/main/assets/*.db
-      - sed -i '/org.gradle.java.home/d' gradle.properties
-      - sed -i '/git lfs pull/d' gradlew || true
+    prebuild: rm -rf data/*.db && rm -rf androidApp/src/main/assets/*.db && sed -i
+      '/git lfs pull/d' gradlew || true
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

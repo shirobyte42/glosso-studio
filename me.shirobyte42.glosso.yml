@@ -1,6 +1,5 @@
 Categories:
-  - Education
-  - Language
+  - Science & Education
 License: AGPL-3.0-or-later
 AuthorName: ShiroByte42
 SourceCode: https://gitlab.com/shirobyte421/glosso-studio
@@ -13,15 +12,9 @@ Builds:
   - versionName: 0.1.0
     versionCode: 1
     commit: v0.1.0
-    subdir: .
     gradle:
       - :androidApp:assembleRelease
-    prebuild:
-      - # Ensure no pre-bundled data exists in the source tree during build
-      - rm -rf data/*.db
-      - rm -rf androidApp/src/main/assets/*.db
-      - # F-Droid build environment often needs to skip LFS pull during gradle build
-      - sed -i '/git lfs pull/d' gradlew || true
+    prebuild: rm -rf data/*.db && rm -rf androidApp/src/main/assets/*.db && sed -i '/git lfs pull/d' gradlew || true
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

@@ -15,7 +15,8 @@ Builds:
     versionCode: 1
     commit: v0.1.0
     gradle:
-      - assembleRelease
+      - yes
+    output: androidApp/build/outputs/apk/release/androidApp-release.apk
     prebuild: rm -rf data/*.db && rm -rf androidApp/src/main/assets/*.db && sed -i
       '/org.gradle.java.home/d' gradle.properties && sed -i '/git lfs pull/d' gradlew || true
 

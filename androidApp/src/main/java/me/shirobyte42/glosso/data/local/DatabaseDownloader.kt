@@ -2,15 +2,19 @@ package me.shirobyte42.glosso.data.local
 
 import android.content.Context
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.util.cio.*
-import io.ktor.utils.io.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 class DatabaseDownloader(
     private val context: Context,
@@ -18,8 +22,6 @@ class DatabaseDownloader(
 ) {
     private val DB_NAME = "sentences.db"
     
-    // Dynamically build the URL based on the version name. 
-    // This allows the app to always download the database associated with its release.
     private val DOWNLOAD_URL: String by lazy {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val versionName = packageInfo.versionName
@@ -31,32 +33,43 @@ class DatabaseDownloader(
     }
 
     fun isDatabaseDownloaded(): Boolean {
-        return getDatabaseFile().exists() && getDatabaseFile().length() > 0
+        val file = getDatabaseFile()
+        return file.exists() && file.length() > 0
     }
 
-    fun downloadDatabase(): Flow<DownloadProgress> = flow {
+    fun downloadDatabase(): Flow<DownloadProgress> = callbackFlow {
         val file = getDatabaseFile()
         file.parentFile?.mkdirs()
 
         try {
-            val response = client.get(DOWNLOAD_URL) {
+            val response: HttpResponse = client.get(DOWNLOAD_URL) {
                 onDownload { bytesSentTotal, contentLength ->
-                    if (contentLength > 0) {
-                        emit(DownloadProgress.Progress(bytesSentTotal.toFloat() / contentLength))
+                    if (contentLength != null && contentLength > 0) {
+                        trySend(DownloadProgress.Progress(bytesSentTotal.toFloat() / contentLength))
                     }
                 }
             }
 
             if (response.status.isSuccess()) {
-                val channel = response.bodyAsChannel()
-                file.writeChannel().use { it.writeFrom(channel) }
-                emit(DownloadProgress.Success)
+                val inputStream = response.body<InputStream>()
+                
+                withContext(Dispatchers.IO) {
+                    FileOutputStream(file).use { output ->
+                        inputStream.copyTo(output)
+                    }
+                }
+                trySend(DownloadProgress.Success)
+                close()
             } else {
-                emit(DownloadProgress.Error("Failed to download: ${response.status}"))
+                trySend(DownloadProgress.Error("Failed to download: ${response.status}"))
+                close()
             }
         } catch (e: Exception) {
-            emit(DownloadProgress.Error(e.message ?: "Unknown error"))
+            trySend(DownloadProgress.Error(e.message ?: "Unknown error"))
+            close(e)
         }
+        
+        awaitClose { }
     }
 }
 

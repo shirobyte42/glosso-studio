@@ -20,41 +20,99 @@ class DatabaseDownloader(
     private val context: Context,
     private val client: HttpClient
 ) {
+    private val ONNX_MODEL_NAME = "allosaurus_eng2102.onnx"
+    private val PHONE_MAP_NAME = "phone_eng.txt"
+
     private fun getDbName(levelIndex: Int) = "sentences_$levelIndex.db"
     
-    private fun getDownloadUrl(levelIndex: Int): String {
+    private fun getBaseUrl(): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val versionName = packageInfo.versionName
-        // GitLab direct raw file URL for LFS-tracked files. 
-        // This is more reliable for large files than the release asset redirect.
-        return "https://gitlab.com/shirobyte421/glosso-studio/-/raw/v$versionName/data/${getDbName(levelIndex)}"
+        return "https://gitlab.com/shirobyte421/glosso-studio/-/raw/v$versionName/data"
     }
 
-    fun getDatabaseFile(levelIndex: Int): File {
-        return context.getDatabasePath(getDbName(levelIndex))
-    }
+    private fun getDownloadUrl(fileName: String): String = "${getBaseUrl()}/$fileName"
+
+    fun getDatabaseFile(levelIndex: Int): File = context.getDatabasePath(getDbName(levelIndex))
+    
+    fun getOnnxFile(): File = File(context.filesDir, ONNX_MODEL_NAME)
+    
+    fun getPhoneMapFile(): File = File(context.filesDir, PHONE_MAP_NAME)
 
     fun isLevelDownloaded(levelIndex: Int): Boolean {
         val file = getDatabaseFile(levelIndex)
-        // Corrected heuristic: sentences_0.db is ~48MB. 
-        // 1MB was too low and might have allowed corrupted files to pass.
         return file.exists() && file.length() > 40 * 1024 * 1024
+    }
+
+    fun isModelSetupComplete(): Boolean {
+        return getOnnxFile().exists() && getOnnxFile().length() > 40 * 1024 * 1024 &&
+               getPhoneMapFile().exists() && getPhoneMapFile().length() > 100
     }
 
     fun deleteLevel(levelIndex: Int) {
         val file = getDatabaseFile(levelIndex)
-        if (file.exists()) {
-            file.delete()
+        if (file.exists()) file.delete()
+    }
+
+    fun downloadRequiredAssets(): Flow<DownloadProgress> = callbackFlow {
+        try {
+            // 1. Download Phone Map (tiny)
+            if (!getPhoneMapFile().exists()) {
+                downloadFile(getDownloadUrl(PHONE_MAP_NAME), getPhoneMapFile())
+            }
+
+            // 2. Download ONNX Model (approx 43MB)
+            if (!getOnnxFile().exists() || getOnnxFile().length() < 40 * 1024 * 1024) {
+                downloadStreaming(getDownloadUrl(ONNX_MODEL_NAME), getOnnxFile()) { progress ->
+                    trySend(DownloadProgress.Progress(progress))
+                }
+            }
+
+            trySend(DownloadProgress.Success)
+            close()
+        } catch (e: Exception) {
+            trySend(DownloadProgress.Error(e.message ?: "Asset download failed"))
+            close(e)
+        }
+        awaitClose { }
+    }
+
+    private suspend fun downloadFile(url: String, destination: File) {
+        val bytes = client.get(url).bodyAsBytes()
+        withContext(Dispatchers.IO) {
+            destination.writeBytes(bytes)
+        }
+    }
+
+    private suspend fun downloadStreaming(url: String, destination: File, onProgress: (Float) -> Unit) {
+        client.prepareGet(url) {
+            onDownload { bytesSentTotal, contentLength ->
+                if (contentLength != null && contentLength > 0) {
+                    onProgress(bytesSentTotal.toFloat() / contentLength)
+                }
+            }
+        }.execute { response ->
+            if (response.status.isSuccess()) {
+                val channel = response.bodyAsChannel()
+                withContext(Dispatchers.IO) {
+                    FileOutputStream(destination).use { output ->
+                        channel.toInputStream().copyTo(output)
+                        output.flush()
+                        output.getFD().sync()
+                    }
+                }
+            } else {
+                throw Exception("Failed to download: ${response.status}")
+            }
         }
     }
 
     fun downloadLevel(levelIndex: Int): Flow<DownloadProgress> = callbackFlow {
         val file = getDatabaseFile(levelIndex)
         file.parentFile?.mkdirs()
-        val url = getDownloadUrl(levelIndex)
+        val url = getDownloadUrl(getDbName(levelIndex))
 
         try {
-            // 1. Verify size
             val headResponse = client.head(url)
             val expectedSize = headResponse.contentLength() ?: -1L
 
@@ -68,35 +126,15 @@ class DatabaseDownloader(
                 file.delete()
             }
 
-            // 2. Download
-            client.prepareGet(url) {
-                onDownload { bytesSentTotal, contentLength ->
-                    if (contentLength != null && contentLength > 0) {
-                        trySend(DownloadProgress.Progress(bytesSentTotal.toFloat() / contentLength))
-                    }
-                }
-            }.execute { response ->
-                if (response.status.isSuccess()) {
-                    val channel = response.bodyAsChannel()
-                    withContext(Dispatchers.IO) {
-                        FileOutputStream(file).use { output ->
-                            channel.toInputStream().copyTo(output)
-                            output.flush()
-                            output.getFD().sync() // Force write to physical storage
-                        }
-                    }
-                    trySend(DownloadProgress.Success)
-                    close()
-                } else {
-                    trySend(DownloadProgress.Error("Failed to download level $levelIndex: ${response.status}"))
-                    close()
-                }
+            downloadStreaming(url, file) { progress ->
+                trySend(DownloadProgress.Progress(progress))
             }
+            trySend(DownloadProgress.Success)
+            close()
         } catch (e: Exception) {
-            trySend(DownloadProgress.Error(e.message ?: "Unknown error"))
+            trySend(DownloadProgress.Error(e.message ?: "Level download failed"))
             close(e)
         }
-        
         awaitClose { }
     }
 }

@@ -33,6 +33,34 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     var showResetDialog by remember { mutableStateOf(false) }
 
+    if (state.isInitialSetupRequired) {
+        AlertDialog(
+            onDismissRequest = { },
+            properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            title = { Text("Initial Setup", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Glosso Studio needs to download the acoustic model (approx. 45MB) to perform phonetic recognition.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "WARNING: If you are using mobile data, costs may apply. We recommend using a Wi-Fi connection.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.startInitialSetup() },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("SET UP NOW")
+                }
+            }
+        )
+    }
+
     if (state.isDownloadRequired) {
         val levelsNames = listOf("Beginner", "Elementary", "Intermediate", "Upper-Int", "Advanced", "Mastery")
         val levelName = state.pendingLevelIndex?.let { levelsNames.getOrNull(it) } ?: "this level"

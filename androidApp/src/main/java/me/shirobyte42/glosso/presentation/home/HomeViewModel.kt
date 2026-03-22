@@ -24,7 +24,7 @@ class HomeViewModel(
 
     init {
         Log.d(TAG, "Initializing HomeViewModel")
-        refreshStats()
+        checkInitialSetup()
         viewModelScope.launch {
             prefs.getMasteryStreakFlow().collect { streak ->
                 Log.d(TAG, "Streak updated from flow: $streak")
@@ -33,11 +33,44 @@ class HomeViewModel(
         }
     }
 
+    private fun checkInitialSetup() {
+        if (!downloader.isModelSetupComplete()) {
+            _uiState.update { it.copy(isInitialSetupRequired = true) }
+        } else {
+            refreshStats()
+        }
+    }
+
     fun onLevelClick(levelIndex: Int, onNavigate: (Int) -> Unit) {
+        if (!downloader.isModelSetupComplete()) {
+            _uiState.update { it.copy(isInitialSetupRequired = true) }
+            return
+        }
+        
         if (downloader.isLevelDownloaded(levelIndex)) {
             onNavigate(levelIndex)
         } else {
             _uiState.update { it.copy(pendingLevelIndex = levelIndex, isDownloadRequired = true) }
+        }
+    }
+
+    fun startInitialSetup() {
+        _uiState.update { it.copy(isDownloading = true, isInitialSetupRequired = false) }
+        viewModelScope.launch {
+            downloader.downloadRequiredAssets().collect { progress ->
+                when (progress) {
+                    is DownloadProgress.Progress -> {
+                        _uiState.update { it.copy(downloadProgress = progress.percent) }
+                    }
+                    is DownloadProgress.Success -> {
+                        _uiState.update { it.copy(isDownloading = false, downloadProgress = 1f) }
+                        refreshStats()
+                    }
+                    is DownloadProgress.Error -> {
+                        _uiState.update { it.copy(isDownloading = false, downloadError = progress.message) }
+                    }
+                }
+            }
         }
     }
 
@@ -125,6 +158,7 @@ data class HomeUiState(
     val levelProgress: List<Float> = List(6) { 0f },
     val levelStats: List<LevelStat> = List(6) { LevelStat(0, 10, 0f) },
     val isLoading: Boolean = false,
+    val isInitialSetupRequired: Boolean = false,
     val isDownloadRequired: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,

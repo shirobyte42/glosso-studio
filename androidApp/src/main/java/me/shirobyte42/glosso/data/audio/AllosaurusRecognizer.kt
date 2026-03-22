@@ -25,31 +25,20 @@ class AllosaurusRecognizer(private val context: Context) {
             Log.d(TAG, "Initializing OrtEnvironment...")
             ortEnv = OrtEnvironment.getEnvironment()
             
-            Log.d(TAG, "Checking assets for model...")
-            val assetList = context.assets.list("") ?: emptyArray()
-            Log.d(TAG, "Assets available: ${assetList.joinToString(", ")}")
-
-            if ("allosaurus_eng2102.onnx" !in assetList) {
-                Log.e(TAG, "CRITICAL: allosaurus_eng2102.onnx NOT FOUND in assets!")
+            val modelFile = File(context.filesDir, "allosaurus_eng2102.onnx")
+            if (!modelFile.exists()) {
+                Log.e(TAG, "CRITICAL: model NOT FOUND in files!")
             }
 
-            Log.d(TAG, "Loading model allosaurus_eng2102.onnx from assets...")
-            val modelBytes = try {
-                context.assets.open("allosaurus_eng2102.onnx").use { it.readBytes() }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to read model bytes from assets", e)
-                throw e
-            }
+            Log.d(TAG, "Loading model from ${modelFile.absolutePath}...")
+            val modelBytes = modelFile.readBytes()
             Log.d(TAG, "Model size read: ${modelBytes.size} bytes")
             
             Log.d(TAG, "Creating OrtSession...")
             ortSession = ortEnv?.createSession(modelBytes)
-            Log.d(TAG, "OrtSession created successfully")
             
             Log.d(TAG, "Loading English phone map...")
             phoneMap = loadPhoneMap()
-            
-            Log.d(TAG, "Initialization complete. Map size: ${phoneMap.size}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AllosaurusRecognizer", e)
         }
@@ -58,7 +47,8 @@ class AllosaurusRecognizer(private val context: Context) {
     private fun loadPhoneMap(): Map<Int, String> {
         val map = mutableMapOf<Int, String>()
         try {
-            context.assets.open("phone_eng.txt").bufferedReader().useLines { lines ->
+            val phoneMapFile = File(context.filesDir, "phone_eng.txt")
+            phoneMapFile.bufferedReader().useLines { lines ->
                 lines.forEach { line ->
                     val parts = line.trim().split(Regex("\\s+"))
                     if (parts.size >= 2) {

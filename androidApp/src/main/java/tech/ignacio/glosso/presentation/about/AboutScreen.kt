@@ -80,8 +80,11 @@ fun AboutScreen(
             
             AboutSection(
                 icon = Icons.Default.Description,
-                title = "Credits",
-                description = "Glosso Studio uses the Allosaurus model for phonetic recognition, which is licensed under the GNU General Public License v3.0 (GPL-3.0)."
+                title = "Credits & Inspiration",
+                description = "Glosso Studio is built upon the incredible work of others:\n\n" +
+                        "• Allosaurus Model: Phonetic recognition powered by the Allosaurus project (GPL-3.0).\n" +
+                        "• Inspiration: Heavily inspired by the ai-pronunciation-trainer project by Thiagohgl.\n" +
+                        "• Developer: shirobyte42 — standing on the shoulders of giants."
             )
             
             Spacer(modifier = Modifier.height(48.dp))

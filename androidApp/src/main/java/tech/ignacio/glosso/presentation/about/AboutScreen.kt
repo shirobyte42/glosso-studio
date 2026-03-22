@@ -15,8 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -25,6 +30,8 @@ import androidx.compose.ui.unit.sp
 fun AboutScreen(
     onNavigateBack: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
+    
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -78,14 +85,60 @@ fun AboutScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            AboutSection(
-                icon = Icons.Default.Description,
-                title = "Credits & Inspiration",
-                description = "Glosso Studio is built upon the incredible work of others:\n\n" +
-                        "• Allosaurus Model: Phonetic recognition powered by the Allosaurus project (GPL-3.0).\n" +
-                        "• Inspiration: Heavily inspired by the ai-pronunciation-trainer project by Thiagohgl.\n" +
-                        "• Developer: shirobyte42 — standing on the shoulders of giants."
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(text = "Credits & Inspiration", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Glosso Studio is built upon the incredible work of others:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    BulletPoint("Phonetic recognition powered by the Allosaurus project (GPL-3.0).")
+                    
+                    val inspirationString = buildAnnotatedString {
+                        append("Heavily inspired by the ")
+                        pushStringAnnotation(tag = "URL", annotation = "https://github.com/Thiagohgl/ai-pronunciation-trainer")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold)) {
+                            append("ai-pronunciation-trainer")
+                        }
+                        pop()
+                        append(" project by ")
+                        pushStringAnnotation(tag = "URL", annotation = "https://github.com/Thiagohgl")
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold)) {
+                            append("Thiagohgl")
+                        }
+                        pop()
+                        append(".")
+                    }
+                    
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text("• ", style = MaterialTheme.typography.bodyMedium)
+                        androidx.compose.foundation.text.ClickableText(
+                            text = inspirationString,
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                            onClick = { offset ->
+                                inspirationString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                                    .firstOrNull()?.let { annotation ->
+                                        uriHandler.openUri(annotation.item)
+                                    }
+                            }
+                        )
+                    }
+
+                    BulletPoint("Developer: shirobyte42 — standing on the shoulders of giants.")
+                }
+            }
             
             Spacer(modifier = Modifier.height(48.dp))
             
@@ -98,6 +151,14 @@ fun AboutScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+fun BulletPoint(text: String) {
+    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text("• ", style = MaterialTheme.typography.bodyMedium)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

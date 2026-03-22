@@ -25,7 +25,9 @@ class DatabaseDownloader(
     private fun getDownloadUrl(levelIndex: Int): String {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val versionName = packageInfo.versionName
-        return "https://github.com/shirobyte42/glosso-studio/releases/download/v$versionName/${getDbName(levelIndex)}"
+        // GitLab direct raw file URL for LFS-tracked files. 
+        // This is more reliable for large files than the release asset redirect.
+        return "https://gitlab.com/shirobyte421/glosso-studio/-/raw/v$versionName/data/${getDbName(levelIndex)}"
     }
 
     fun getDatabaseFile(levelIndex: Int): File {

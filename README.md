@@ -10,7 +10,7 @@ The application uses the Allosaurus model (specifically `eng2102`) to perform ph
 ### Offline-First Architecture
 The application is designed to be fully functional offline once the initial assets are retrieved.
 - **ONNX Runtime:** Executes the acoustic model (`eng2102`) directly on the device.
-- **Dynamic Database Download:** To keep the APK size minimal, the `sentences.db` (approx. 500MB) is downloaded from GitHub Releases on first launch and stored in the local Room database path.
+- **Dynamic Database Download:** To keep the APK size minimal, curriculum databases are downloaded on-demand from GitLab when a level is first accessed.
 - **Room Database:** Manages the repository of practice sentences and user progress.
 - **Git LFS:** Used for managing large binary assets in the repository.
 
@@ -49,7 +49,7 @@ The application is designed to be fully functional offline once the initial asse
 
 2. **Clone the Repository**
    ```bash
-   git clone https://github.com/shirobyte42/glosso-studio.git
+   git clone git@gitlab.com:shirobyte421/glosso-studio.git
    cd glosso-studio
    git lfs pull
    ```

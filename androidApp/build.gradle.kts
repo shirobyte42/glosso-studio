@@ -34,7 +34,7 @@ android {
         applicationId = "me.shirobyte42.glosso"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
+        versionCode = 100
         versionName = "0.1.0"
     }
 

@@ -12,8 +12,8 @@ Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 
 Builds:
   - versionName: 0.1.0
-    versionCode: 1
-    commit: 6d06c10df798792d66309974f6bdc8bd072bb56b
+    versionCode: 100
+    commit: 7928ca79c417adaf776e992e717c0b46091077db
     subdir: androidApp
     gradle:
       - yes
@@ -25,4 +25,4 @@ Builds:
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 0.1.0
-CurrentVersionCode: 1
+CurrentVersionCode: 100

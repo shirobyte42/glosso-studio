@@ -13,10 +13,10 @@ Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 Builds:
   - versionName: 0.1.0
     versionCode: 1
-    commit: bd32e08f2fe6c9bc55a1c31fae27e4a79c0071cd
+    commit: 6d06c10df798792d66309974f6bdc8bd072bb56b
     subdir: androidApp
     gradle:
-      - assembleRelease
+      - yes
     prebuild:
       - rm -rf ../data/*.db
       - sed -i '/org.gradle.java.home/d' ../gradle.properties

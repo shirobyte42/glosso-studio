@@ -13,7 +13,7 @@ Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 Builds:
   - versionName: 0.1.0
     versionCode: 1
-    commit: v0.1.0
+    commit: 88fac847d51bd9ba12f522ce75f70f03e75c2937
     subdir: androidApp
     gradle:
       - fdroid

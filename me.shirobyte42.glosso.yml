@@ -6,6 +6,9 @@ AuthorName: ShiroByte42
 SourceCode: https://gitlab.com/shirobyte421/glosso-studio
 IssueTracker: https://gitlab.com/shirobyte421/glosso-studio/-/issues
 
+AntiFeatures:
+  - NonFreeNet
+
 RepoType: git
 Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 
@@ -17,10 +20,11 @@ Builds:
     gradle:
       - :androidApp:assembleRelease
     prebuild:
-      - # Ensure Git LFS is handled if the build environment doesn't do it automatically.
-      - # Note: F-Droid build servers might need specific config for LFS.
-      - # Removing any pre-bundled binary databases if they exist (though we moved them to data/).
+      - # Ensure no pre-bundled data exists in the source tree during build
       - rm -rf data/*.db
+      - rm -rf androidApp/src/main/assets/*.db
+      - # F-Droid build environment often needs to skip LFS pull during gradle build
+      - sed -i '/git lfs pull/d' gradlew || true
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

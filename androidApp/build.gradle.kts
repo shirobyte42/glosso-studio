@@ -38,6 +38,11 @@ android {
         versionName = "0.1.0"
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

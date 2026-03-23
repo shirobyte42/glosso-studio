@@ -9,11 +9,12 @@ AutoName: Glosso
 
 RepoType: git
 Repo: https://gitlab.com/shirobyte421/glosso-studio.git
+Binaries: https://github.com/shirobyte42/glosso-studio/releases/download/v%v/androidApp-release.apk
 
 Builds:
   - versionName: 0.1.2
     versionCode: 102
-    commit: 27d7ab42dd6c88d695da35217f6ece2ae0508cc4
+    commit: ac5f9e076a29c4a040dde710937a5e4b8b49df62
     subdir: androidApp
     gradle:
       - yes
@@ -22,8 +23,7 @@ Builds:
       - sed -i '/org.gradle.java.home/d' ../gradle.properties
       - sed -i '/git lfs pull/d' ../gradlew || true
 
-AllowedAPKSigningKeys:
-  - e1cce8e8b8801e8b3ec90df840b6f80c99248d68b9c276bf79e8ead0f310c984
+AllowedAPKSigningKeys: e1cce8e8b8801e8b3ec90df840b6f80c99248d68b9c276bf79e8ead0f310c984
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags

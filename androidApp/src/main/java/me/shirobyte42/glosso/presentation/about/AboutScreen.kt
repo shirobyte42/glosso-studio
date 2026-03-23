@@ -59,7 +59,7 @@ fun AboutScreen(
             )
             
             Text(
-                text = "Version 0.1.1",
+                text = "Version 0.1.2",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray
             )
@@ -161,7 +161,7 @@ fun AboutScreen(
                         append("Developer: ")
                         pushStringAnnotation(tag = "URL", annotation = "https://github.com/shirobyte42")
                         withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold)) {
-                            append("shirobyte42")
+                            append("The Glosso Studio Dev")
                         }
                         pop()
                         append(" — standing on the shoulders of giants.")

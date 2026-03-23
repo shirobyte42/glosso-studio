@@ -34,8 +34,8 @@ android {
         applicationId = "me.shirobyte42.glosso"
         minSdk = 26
         targetSdk = 34
-        versionCode = 101
-        versionName = "0.1.1"
+        versionCode = 102
+        versionName = "0.1.2"
     }
 
     dependenciesInfo {
@@ -53,6 +53,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+
+    // AGP 8.x way to disable ArtProfile and other non-deterministic tasks
+    androidResources {
+        @Suppress("UnstableApiUsage")
+        generateLocaleConfig = false
     }
 
     compileOptions {

@@ -12,9 +12,9 @@ Repo: https://gitlab.com/shirobyte421/glosso-studio.git
 Binaries: https://gitlab.com/shirobyte421/glosso-studio/-/releases/v%v/downloads/glosso-studio-v%v.apk
 
 Builds:
-  - versionName: 1.0.3
-    versionCode: 1003
-    commit: 144772275fce0a042eab8ca794240665125fc810
+  - versionName: 1.0.4
+    versionCode: 1004
+    commit: f06ed21c05dd41d28fb1e1187c2e439d4461f956
     subdir: androidApp
     gradle:
       - yes
@@ -28,5 +28,5 @@ AllowedAPKSigningKeys:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.0.3
-CurrentVersionCode: 1003
+CurrentVersion: 1.0.4
+CurrentVersionCode: 1004

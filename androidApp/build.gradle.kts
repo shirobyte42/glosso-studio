@@ -33,8 +33,8 @@ defaultConfig {
     applicationId = "me.shirobyte42.glosso"
     minSdk = 26
     targetSdk = 35
-    versionCode = 1003
-    versionName = "1.0.3"
+    versionCode = 1004
+    versionName = "1.0.4"
 }
 
 dependenciesInfo {
@@ -51,14 +51,14 @@ buildTypes {
             getDefaultProguardFile("proguard-android-optimize.txt"),
             "proguard-rules.pro"
         )
-        // Include native debug symbols in the AAB
+        // Ensure full debug symbols for native libs
         ndk {
             debugSymbolLevel = "full"
         }
     }
 }
 
-// AGP 8.x way to disable non-deterministic tasks
+// Disable all non-deterministic resource generation
 androidResources {
     @Suppress("UnstableApiUsage")
     generateLocaleConfig = false
@@ -66,24 +66,25 @@ androidResources {
 
 packaging {
     jniLibs {
-        // Prevent non-deterministic stripping of native libraries
         @Suppress("UnstableApiUsage")
         keepDebugSymbols.add("**/*.so")
     }
     resources {
-        // Remove non-deterministic profile files
+        // Strip non-deterministic files from APK
         excludes.add("META-INF/*.version")
         excludes.add("*.prof")
+        excludes.add("META-INF/version-control-info.textproto")
     }
 }
 
-// Aggressively disable ALL ArtProfile and Baseline Profile tasks
+// Completely disable non-deterministic background tasks
 tasks.configureEach {
-    if (name.contains("ArtProfile", ignoreCase = true) || name.contains("BaselineProfile", ignoreCase = true)) {
+    if (name.contains("ArtProfile", ignoreCase = true) || 
+        name.contains("BaselineProfile", ignoreCase = true) ||
+        name.contains("vcsInfo", ignoreCase = true)) {
         enabled = false
     }
 }
-
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

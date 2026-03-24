@@ -1,22 +1,7 @@
-# SLF4J
--dontwarn org.slf4j.**
+# Add any project specific keep rules here:
 
-# Ktor
--keep class io.ktor.** { *; }
--dontwarn io.ktor.**
-
-# ONNX Runtime
--keep class ai.onnxruntime.** { *; }
--dontwarn ai.onnxruntime.**
-
-# Room
--keep class androidx.room.** { *; }
--dontwarn androidx.room.**
-
-# Koin
--keep class org.koin.** { *; }
--dontwarn org.koin.**
-
-# Lottie
--keep class com.airbnb.lottie.** { *; }
--dontwarn com.airbnb.lottie.**
+# F-Droid Reproducible Build Fixes
+-keep class kotlinx.coroutines.CoroutineExceptionHandler
+-keep class kotlinx.coroutines.internal.MainDispatcherFactory
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory
+-dontnote kotlinx.coroutines.internal.MainDispatcherFactory

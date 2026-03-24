@@ -52,6 +52,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Include native debug symbols in the AAB for Google Play Console
+            @Suppress("UnstableApiUsage")
+            ndk {
+                debugSymbolLevel = "full"
+            }
         }
     }
 
@@ -65,14 +70,6 @@ android {
             // Prevent non-deterministic stripping of native libraries
             @Suppress("UnstableApiUsage")
             keepDebugSymbols.add("**/*.so")
-        }
-    }
-
-    // Include native debug symbols in the AAB for Google Play Console
-    @Suppress("UnstableApiUsage")
-    nativeDebugSymbolExtraction {
-        symbolTable {
-            // Extract symbol tables for all native libraries
         }
     }
 

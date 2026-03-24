@@ -5,3 +5,4 @@
 -keep class kotlinx.coroutines.internal.MainDispatcherFactory
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory
 -dontnote kotlinx.coroutines.internal.MainDispatcherFactory
+-dontwarn org.slf4j.**

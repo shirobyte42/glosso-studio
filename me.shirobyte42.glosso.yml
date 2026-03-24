@@ -14,7 +14,7 @@ Binaries: https://gitlab.com/shirobyte421/glosso-studio/-/releases/v%v/downloads
 Builds:
   - versionName: 1.0.3
     versionCode: 1003
-    commit: 03784b76a9b27c996c92aa33ddc5b1deacbe0f2d
+    commit: 144772275fce0a042eab8ca794240665125fc810
     subdir: androidApp
     gradle:
       - yes

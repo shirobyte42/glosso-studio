@@ -59,7 +59,7 @@ fun AboutScreen(
             )
             
             Text(
-                text = "Version 0.1.2",
+                text = "Version 0.1.3",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.Gray
             )

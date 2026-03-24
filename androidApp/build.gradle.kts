@@ -34,8 +34,8 @@ android {
         applicationId = "me.shirobyte42.glosso"
         minSdk = 26
         targetSdk = 34
-        versionCode = 102
-        versionName = "0.1.2"
+        versionCode = 103
+        versionName = "0.1.3"
     }
 
     dependenciesInfo {
@@ -45,8 +45,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -55,10 +55,18 @@ android {
         }
     }
 
-    // AGP 8.x way to disable ArtProfile and other non-deterministic tasks
+    // AGP 8.x way to disable non-deterministic tasks
     androidResources {
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = false
+    }
+
+    packaging {
+        jniLibs {
+            // Prevent non-deterministic stripping of native libraries
+            @Suppress("UnstableApiUsage")
+            keepDebugSymbols.add("**/*.so")
+        }
     }
 
     compileOptions {

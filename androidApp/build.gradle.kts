@@ -33,9 +33,9 @@ android {
     defaultConfig {
         applicationId = "me.shirobyte42.glosso"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1000
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 1001
+        versionName = "1.0.1"
     }
 
     dependenciesInfo {
@@ -55,7 +55,6 @@ android {
         }
     }
 
-    // AGP 8.x way to disable non-deterministic tasks
     androidResources {
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = false
@@ -66,6 +65,14 @@ android {
             // Prevent non-deterministic stripping of native libraries
             @Suppress("UnstableApiUsage")
             keepDebugSymbols.add("**/*.so")
+        }
+    }
+
+    // Include native debug symbols in the AAB for Google Play Console
+    @Suppress("UnstableApiUsage")
+    nativeDebugSymbolExtraction {
+        symbolTable {
+            // Extract symbol tables for all native libraries
         }
     }
 

@@ -34,8 +34,8 @@ android {
         applicationId = "me.shirobyte42.glosso"
         minSdk = 26
         targetSdk = 34
-        versionCode = 103
-        versionName = "0.1.3"
+        versionCode = 1000
+        versionName = "1.0.0"
     }
 
     dependenciesInfo {
@@ -45,8 +45,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

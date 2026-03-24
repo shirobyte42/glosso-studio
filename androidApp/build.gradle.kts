@@ -29,48 +29,61 @@ android {
             storePassword = localProperties.getProperty("signing.storePass")
         }
     }
+defaultConfig {
+    applicationId = "me.shirobyte42.glosso"
+    minSdk = 26
+    targetSdk = 35
+    versionCode = 1003
+    versionName = "1.0.3"
+}
 
-    defaultConfig {
-        applicationId = "me.shirobyte42.glosso"
-        minSdk = 26
-        targetSdk = 35
-        versionCode = 1002
-        versionName = "1.0.2"
-    }
+dependenciesInfo {
+    includeInApk = false
+    includeInBundle = false
+}
 
-    dependenciesInfo {
-        includeInApk = false
-        includeInBundle = false
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            // Include native debug symbols in the AAB
-            ndk {
-                debugSymbolLevel = "full"
-            }
+buildTypes {
+    release {
+        isMinifyEnabled = true
+        isShrinkResources = true
+        signingConfig = signingConfigs.getByName("release")
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+        // Include native debug symbols in the AAB
+        ndk {
+            debugSymbolLevel = "full"
         }
     }
+}
 
-    androidResources {
+// AGP 8.x way to disable non-deterministic tasks
+androidResources {
+    @Suppress("UnstableApiUsage")
+    generateLocaleConfig = false
+}
+
+packaging {
+    jniLibs {
+        // Prevent non-deterministic stripping of native libraries
         @Suppress("UnstableApiUsage")
-        generateLocaleConfig = false
+        keepDebugSymbols.add("**/*.so")
     }
+    resources {
+        // Remove non-deterministic profile files
+        excludes.add("META-INF/*.version")
+        excludes.add("*.prof")
+    }
+}
 
-    packaging {
-        jniLibs {
-            // Prevent non-deterministic stripping of native libraries
-            @Suppress("UnstableApiUsage")
-            keepDebugSymbols.add("**/*.so")
-        }
+// Aggressively disable ALL ArtProfile and Baseline Profile tasks
+tasks.configureEach {
+    if (name.contains("ArtProfile", ignoreCase = true) || name.contains("BaselineProfile", ignoreCase = true)) {
+        enabled = false
     }
+}
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

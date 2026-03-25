@@ -14,6 +14,9 @@ interface PreferenceRepository {
     fun getMasteryStreak(): Int
     fun setMasteryStreak(streak: Int)
     
+    fun getMasteryCombo(): Int
+    fun setMasteryCombo(combo: Int)
+    
     fun getBestMasteryStreak(): Int
     fun setBestMasteryStreak(streak: Int)
 
@@ -24,4 +27,7 @@ interface PreferenceRepository {
     fun getMasteryCountForCategory(category: Int): Int
     fun getTotalMasteryCount(): Int
     fun resetProgress()
+
+    fun isTutorialShown(): Boolean
+    fun setTutorialShown(shown: Boolean)
 }

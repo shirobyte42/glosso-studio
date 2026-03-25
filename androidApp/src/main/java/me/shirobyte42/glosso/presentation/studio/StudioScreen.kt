@@ -2,6 +2,7 @@ package me.shirobyte42.glosso.presentation.studio
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -77,6 +78,99 @@ fun ColoredPronunciationText(
     }
 }
 
+@Composable
+fun StudioTutorialOverlay(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { 
+            Text(
+                "HOW TO READ FEEDBACK", 
+                fontWeight = FontWeight.Black, 
+                letterSpacing = 1.sp,
+                style = MaterialTheme.typography.titleMedium
+            ) 
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "After recording your voice, Glosso Studio analyzes your pronunciation phonetically.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FeedbackGuideItem(
+                        color = Color.Black, 
+                        label = "CORRECT", 
+                        description = "Perfect pronunciation."
+                    )
+                    FeedbackGuideItem(
+                        color = Color(0xFFFFA500), // Orange
+                        label = "CLOSE", 
+                        description = "Slightly off, keep practicing."
+                    )
+                    FeedbackGuideItem(
+                        color = Color.Red, 
+                        label = "MISSED", 
+                        description = "Incorrect pronunciation."
+                    )
+                }
+
+                Divider(color = Color.LightGray.copy(alpha = 0.2f), thickness = 1.dp)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Star, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Achieve 85% accuracy or higher to MASTER a sentence and progress in the curriculum.",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text("GOT IT", fontWeight = FontWeight.Bold)
+            }
+        },
+        shape = RoundedCornerShape(28.dp)
+    )
+}
+
+@Composable
+fun FeedbackGuideItem(color: Color, label: String, description: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                label, 
+                style = MaterialTheme.typography.labelSmall, 
+                fontWeight = FontWeight.Black,
+                color = color
+            )
+            Text(
+                description, 
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudioScreen(
@@ -88,6 +182,14 @@ fun StudioScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    BackHandler {
+        onNavigateToSettings()
+    }
+
+    if (state.isTutorialVisible) {
+        StudioTutorialOverlay(onDismiss = { viewModel.dismissTutorial() })
+    }
     
     var hasPermission by remember {
         mutableStateOf(
@@ -145,13 +247,13 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
                         if (state.currentStreak > 0) {
                             Surface(
-                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
+                                color = Color(0xFFFF5722).copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.Whatshot, contentDescription = null, tint = Color(0xFFFF5722), modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("${state.currentStreak}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.tertiary)
+                                    Text("${state.currentStreak}", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = Color(0xFFFF5722))
                                 }
                             }
                         }
@@ -177,9 +279,9 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Professional Practice Card
                 state.currentSentence?.let { sentence ->
@@ -275,7 +377,7 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Results Area - Static container to prevent jumping
                 Box(
@@ -312,14 +414,14 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(48.dp))
             }
 
             // Fixed Control Bar at the bottom
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                    .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (state.isRecording) {
@@ -367,12 +469,11 @@ val infiniteTransition = rememberInfiniteTransition(label = "pulse")
                         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(26.dp), tint = Color.Gray)
+                            Icon(Icons.Default.ArrowForward, contentDescription = "Next Sentence", modifier = Modifier.size(26.dp), tint = Color.Gray)
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(56.dp))
         }
     }
 }

@@ -31,11 +31,17 @@ class StudioViewModel(
 
     private val _uiState = MutableStateFlow(StudioUiState(
         selectedVoiceIndex = prefs.getSelectedVoice(),
-        currentStreak = prefs.getMasteryStreak()
+        currentStreak = prefs.getMasteryCombo(),
+        isTutorialVisible = !prefs.isTutorialShown()
     ))
     val uiState: StateFlow<StudioUiState> = _uiState
 
     private var lastAudioBase64: String? = null
+
+    fun dismissTutorial() {
+        prefs.setTutorialShown(true)
+        _uiState.update { it.copy(isTutorialVisible = false) }
+    }
     
     fun loadTopics(levelIndex: Int) {
         viewModelScope.launch {
@@ -199,5 +205,6 @@ data class StudioUiState(
     val topics: List<String> = emptyList(),
     val selectedTopics: List<String> = emptyList(),
     val hasRecordedVoice: Boolean = false,
+    val isTutorialVisible: Boolean = false,
     val error: String? = null
 )

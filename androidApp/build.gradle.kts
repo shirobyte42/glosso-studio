@@ -6,11 +6,31 @@ plugins {
 }
 
 import java.util.Properties
+import java.io.ByteArrayOutputStream
+
+fun getGitHash(): String {
+    val ciHash = System.getenv("CI_COMMIT_SHORT_SHA")
+    if (!ciHash.isNullOrEmpty()) return ciHash
+    
+    return try {
+        val stdout = ByteArrayOutputStream()
+        project.exec {
+            commandLine("git", "rev-parse", "--short", "HEAD")
+            standardOutput = stdout
+        }
+        stdout.toString().trim()
+    } catch (e: Exception) {
+        "unknown"
+    }
+}
 
 android {
     namespace = "me.shirobyte42.glosso"
     compileSdk = 34
     buildToolsVersion = "34.0.0"
+
+    val gitHash = getGitHash()
+    val baseVersionName = "1.0.4"
 
     val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
@@ -22,11 +42,11 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = localProperties.getProperty("signing.alias")
-            keyPassword = localProperties.getProperty("signing.keyPass")
-            val storeFilePath = localProperties.getProperty("signing.storeFile")
+            keyAlias = System.getenv("SIGNING_ALIAS") ?: localProperties.getProperty("signing.alias")
+            keyPassword = System.getenv("SIGNING_KEY_PASS") ?: localProperties.getProperty("signing.keyPass")
+            val storeFilePath = System.getenv("SIGNING_STORE_FILE") ?: localProperties.getProperty("signing.storeFile")
             storeFile = if (storeFilePath != null) rootProject.file(storeFilePath) else null
-            storePassword = localProperties.getProperty("signing.storePass")
+            storePassword = System.getenv("SIGNING_STORE_PASS") ?: localProperties.getProperty("signing.storePass")
         }
     }
 defaultConfig {
@@ -34,7 +54,15 @@ defaultConfig {
     minSdk = 26
     targetSdk = 35
     versionCode = 1004
-    versionName = "1.0.4"
+    versionName = "$baseVersionName-$gitHash"
+}
+
+applicationVariants.all {
+    val variant = this
+    variant.outputs.all {
+        val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
+        output.outputFileName = "glosso-studio-v${variant.versionName}.apk"
+    }
 }
 
 dependenciesInfo {

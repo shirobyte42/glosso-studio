@@ -9,15 +9,23 @@ class UpdateMasteryUseCase(
         val wasAlreadyMastered = prefs.isSentenceMastered(sentenceText)
         val isScoreMastery = score >= 85
         
-        if (isScoreMastery && !wasAlreadyMastered) {
-            prefs.markSentenceAsMastered(sentenceText, category)
+        if (isScoreMastery) {
+            if (!wasAlreadyMastered) {
+                prefs.markSentenceAsMastered(sentenceText, category)
+            }
+            // Increment combo
+            val newCombo = prefs.getMasteryCombo() + 1
+            prefs.setMasteryCombo(newCombo)
+        } else {
+            // Reset combo on failure
+            prefs.setMasteryCombo(0)
         }
 
-        val currentStreak = prefs.getMasteryStreak()
+        val currentCombo = prefs.getMasteryCombo()
         
         return MasteryResult(
             isNewMastery = isScoreMastery && !wasAlreadyMastered,
-            currentStreak = currentStreak,
+            currentStreak = currentCombo,
             score = score
         )
     }

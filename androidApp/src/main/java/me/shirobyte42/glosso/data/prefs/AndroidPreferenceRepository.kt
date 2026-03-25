@@ -53,6 +53,11 @@ class AndroidPreferenceRepository(
         }
     }
 
+    override fun getMasteryCombo(): Int = prefs.getInt("mastery_combo", 0)
+    override fun setMasteryCombo(combo: Int) {
+        prefs.edit().putInt("mastery_combo", combo).apply()
+    }
+
     override fun getBestMasteryStreak(): Int = prefs.getInt("best_mastery_streak", 0)
     override fun setBestMasteryStreak(streak: Int) {
         prefs.edit().putInt("best_mastery_streak", streak).apply()
@@ -96,6 +101,11 @@ class AndroidPreferenceRepository(
         _masteryStreakFlow.value = 0
         masteredSentenceDao.deleteAll()
         activityDayDao.deleteAll()
+    }
+
+    override fun isTutorialShown(): Boolean = prefs.getBoolean("tutorial_shown", false)
+    override fun setTutorialShown(shown: Boolean) {
+        prefs.edit().putBoolean("tutorial_shown", shown).apply()
     }
 
     private suspend fun calculateCurrentStreak(): Int {

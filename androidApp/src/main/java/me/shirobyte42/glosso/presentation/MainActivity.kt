@@ -28,22 +28,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Decide start destination based on preferences
-        val lastLevel = prefs.getLastLevel()
-        val startDestination = if (lastLevel >= 0) "studio/$lastLevel" else "home"
-
         setContent {
             GlossoTheme {
                 val navController = rememberNavController()
-                Scaffold(
+                NavHost(
+                    navController = navController,
+                    startDestination = "home",
                     modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    NavHost(
-                        navController = navController,
-                        startDestination = startDestination,
-                        modifier = Modifier.padding(innerPadding)
-                    ) {
-                        composable("home") {
+                ) {
+                    composable("home") {
                             HomeScreen(
                                 onNavigateToStudio = { category ->
                                     navController.navigate("topics/$category")
@@ -86,11 +79,10 @@ class MainActivity : ComponentActivity() {
                             StudioScreen(
                                 category = levelIndex,
                                 topics = topics,
-                                onNavigateToSettings = { navController.navigate("home") }
+                                onNavigateToSettings = { navController.popBackStack() }
                             )
                         }
                     }
-                }
             }
         }
     }
